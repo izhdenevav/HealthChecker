@@ -1,5 +1,6 @@
 import dlib
 import cv2
+from collections import namedtuple
 
 face_detector = dlib.get_frontal_face_detector()
 landmark_predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
@@ -11,10 +12,12 @@ def get_landmarks_dlib(frame):
     for face in faces:
         landmarks_object = landmark_predictor(gray, face)
 
-    landmarks = [
-        {"number": i + 1, "x": point.x, "y": point.y}
+    Point = namedtuple("Point", ["x", "y"])
+
+    landmarks = {
+        i: Point(point.x, point.y)
         for i, point in enumerate(landmarks_object.parts())
-    ]
+    }
 
     return landmarks
 

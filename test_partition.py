@@ -12,7 +12,11 @@ while True:
     
     landmarks = test_dlib.get_landmarks_dlib(frame)
 
-    print(landmarks)
+    for i in range(68):
+        x, y = landmarks[i].x, landmarks[i].y
+        cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
+    
+    cv2.imshow("Face Landmarks", frame)
         
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
