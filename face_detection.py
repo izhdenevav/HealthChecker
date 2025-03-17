@@ -1,22 +1,13 @@
 import cv2
 import numpy as np
 
-# === 1. Загрузка YOLO модели ===
-yolo_net = cv2.dnn.readNet("yolov4-tiny-3l_best.weights", "yolov4-tiny-3l.cfg")  # Файлы модели
-layer_names = yolo_net.getLayerNames()
-output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]  # Выходные слои
-
-# === 2. Захват видео с веб-камеры ===
-cap = cv2.VideoCapture(0)
-
-# === 3. Основной цикл обработки ===
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
+def find_faces(frame):
+    # === 1. Загрузка YOLO модели ===
+    yolo_net = cv2.dnn.readNet("yolov4-tiny-3l_best.weights", "yolov4-tiny-3l.cfg")  # Файлы модели
+    layer_names = yolo_net.getLayerNames()
+    output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]  # Выходные слои
 
     height, width, _ = frame.shape  # Размер кадра
-
     # === 4. Подготовка изображения для YOLO ===
     blob = cv2.dnn.blobFromImage(frame, 1/255.0, (416, 416), swapRB=True, crop=False)
     yolo_net.setInput(blob)
@@ -36,10 +27,20 @@ while cap.isOpened():
                 x = int(center_x - w / 2)
                 y = int(center_y - h / 2)
                 faces.append((x, y, w, h, confidence))
-
     # === 6. Фильтрация (Non-Maximum Suppression) ===
     indices = cv2.dnn.NMSBoxes([f[:4] for f in faces], [f[4] for f in faces], conf_threshold, nms_threshold)
+    return indices, faces
 
+# === 2. Захват видео с веб-камеры ===
+cap = cv2.VideoCapture(0)
+
+# === 3. Основной цикл обработки ===
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+    indices, faces = find_faces(frame)
+    
     if len(indices) > 0:
         for i in indices.flatten():
             x, y, w, h, conf = faces[i]

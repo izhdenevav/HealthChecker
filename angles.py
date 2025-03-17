@@ -13,7 +13,7 @@ pitch_buffer = deque(maxlen=N)
 roll_buffer = deque(maxlen=N)
 
 # === Инициализация YOLO ===
-yolo_net = cv2.dnn.readNet("yolov4-tiny-3l_best.weights", "yolov4-tiny-3l.cfg")  # Файлы YOLO
+yolo_net = cv2.dnn.readNet("models/yolov4-tiny-3l_best.weights", "models/yolov4-tiny-3l.cfg")  # Файлы YOLO
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
 conf_threshold = 0.5  # Минимальная уверенность
