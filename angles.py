@@ -1,8 +1,16 @@
 import time
+from collections import deque
 
 import cv2
 import numpy as np
 import mediapipe as mp
+
+N = 30
+counter = 0
+yaw = pitch = roll = 0
+yaw_buffer = deque(maxlen=N)
+pitch_buffer = deque(maxlen=N)
+roll_buffer = deque(maxlen=N)
 
 # === Инициализация YOLO ===
 yolo_net = cv2.dnn.readNet("yolov4-tiny-3l_best.weights", "yolov4-tiny-3l.cfg")  # Файлы YOLO
@@ -15,9 +23,6 @@ nms_threshold = 0.4   # Порог подавления слабых боксо�
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True)
 
-# === Захват видео с веб-камеры ===
-cap = cv2.VideoCapture(0)
-
 # === 3D модель ключевых точек головы ===
 model_points = np.array([
     (0.0, 0.0, 0.0),         # 1. Кончик носа
@@ -29,16 +34,25 @@ model_points = np.array([
 ], dtype=np.float64)
 
 # === Параметры камеры ===
-focal_length = 800
-center = (320, 240)  # Предполагаем разрешение 640x480
+focal_length = 640
+center = (640, 360)  # Предполагаем разрешение 640x480
 camera_matrix = np.array([
     [focal_length, 0, center[0]],
     [0, focal_length, center[1]],
     [0, 0, 1]
 ], dtype=np.float64)
 
-counter = 0
+# === Захват видео с веб-камеры ===
+cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture("C:\\Users\\katav\\Desktop\\test_video.mp4")
 
+# === Настройки записи видео ===
+output_path = "output.mp4"  # Имя выходного файла
+fourcc = cv2.VideoWriter_fourcc(*'MP4V')  # Кодек (можно заменить на 'MP4V' для .mp4)
+fps = int(cap.get(cv2.CAP_PROP_FPS))  # Частота кадров
+frame_size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+
+# out_video = cv2.VideoWriter(output_path, fourcc, fps, frame_size)
 # === Цикл обработки видео ===
 while cap.isOpened():
     ret, frame = cap.read()
@@ -103,31 +117,42 @@ while cap.isOpened():
                     # Конвертация в углы поворота
                     rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
                     angles, _, _, _, _, _ = cv2.RQDecomp3x3(rotation_matrix)
-                    print(counter)
-                    if(counter%40 == 0):
-                        counter = 0
-                        yaw, pitch, roll = angles[1], angles[0], angles[2]
+                    yaw, pitch, roll = angles[1], angles[0], angles[2]
 
-                    if(pitch > 90):
-                        pitch = 180 - pitch
-                    elif(pitch < -90):
-                        pitch = -(180 + pitch)
+                    yaw_buffer.append(yaw)
+                    pitch_buffer.append(pitch)
+                    roll_buffer.append(roll)
+
+                    smooth_yaw = np.mean(yaw_buffer)
+                    smooth_pitch = np.mean(pitch_buffer)
+                    smooth_roll = np.mean(roll_buffer)
+                    # print(counter)
+                    # if(counter%N == 0):
+                    #     counter = 0
+                    #     yaw, pitch, roll = angles[1], angles[0], angles[2]
+
+                    if(smooth_pitch > 90):
+                        smooth_pitch = 180 - smooth_pitch
+                    elif(smooth_pitch < -90):
+                        smooth_pitch = -(180 + smooth_pitch)
                     # === Отображение информации ===
-                    cv2.putText(frame, f"Yaw: {yaw:.2f}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                    cv2.putText(frame, f"Pitch: {pitch:.2f}", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                    cv2.putText(frame, f"Roll: {roll:.2f}", (30, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    cv2.putText(frame, f"Yaw: {smooth_yaw:.2f}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    cv2.putText(frame, f"Pitch: {smooth_pitch:.2f}", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    cv2.putText(frame, f"Roll: {smooth_roll:.2f}", (30, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
                     # Рисуем ключевые точки
                     for point in image_points:
                         cv2.circle(frame, (int(point[0]), int(point[1])), 3, (0, 0, 255), -1)
 
             # Отрисовка рамки лица
-            if(abs(yaw) > 10 or abs(roll) > 10 or abs(pitch) > 10):
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            if(abs(smooth_yaw) > 10 or abs(smooth_pitch) > 15 or abs(smooth_roll) > 8):
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
             else:
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)   
             counter += 1
     # === Отображение результата ===
+    # out_video.write(frame)  # Запись кадра в файл
+
     cv2.imshow("Head Pose Estimation with YOLO", frame)
 
     # Выход по ESC
@@ -136,4 +161,5 @@ while cap.isOpened():
 
 # === Освобождение ресурсов ===
 cap.release()
+# out_video.release()  # Освобождение видеопотока записи
 cv2.destroyAllWindows()
