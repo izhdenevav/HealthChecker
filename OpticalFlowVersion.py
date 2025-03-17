@@ -18,17 +18,31 @@ BREATHING_LANDMARKS = [
     209, 429,
 ]
 
+CHEEK_RIGHT = [34, 58, 64, 47]
+CHEEK_LEFT = [264, 288, 294, 277]
+BETWEEN_EYEBROWS = [107, 55, 285, 336]
+NOSE_BRIDGE = [114, 115, 278, 277]
+
+
+# достаем все точки с лица
 def extract_landmarks(frame):
     results = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     landmarks = []
     if results.multi_face_landmarks:
         for face_landmarks in results.multi_face_landmarks:
-            for idx, landmark in enumerate(face_landmarks.landmark):
-                if idx in BREATHING_LANDMARKS:
-                    h, w, _ = frame.shape
-                    x, y = int(landmark.x * w), int(landmark.y * h)
-                    landmarks.append((x, y))
+            for landmark in face_landmarks.landmark:
+                h, w, _ = frame.shape
+                x, y = int(landmark.x * w), int(landmark.y * h)
+                landmarks.append((x, y))
     return landmarks
+
+# а тут из списка всех выбираем только нужные нам
+def filter_landmarks(landmarks, selected_indices):
+    filtered_landmarks = []
+    for idx, landmark in enumerate(landmarks):
+        if idx in selected_indices:
+            filtered_landmarks.append(landmark)
+    return filtered_landmarks
 
 def bandpass_filter(signal, lowcut, highcut, fs, order=5):
     nyquist = 0.5 * fs
@@ -44,7 +58,14 @@ def process_video(video_path):
     timestamps = []
     ret, prev_frame = cap.read() 
     prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-    prev_points = np.array(extract_landmarks(prev_frame), dtype=np.float32)
+    
+    #так это выглядит на примере
+    all_landmarks = extract_landmarks(prev_frame)
+    breathing_landmarks = filter_landmarks(all_landmarks, BREATHING_LANDMARKS)
+    right_cheek_points = filter_landmarks(all_landmarks, CHEEK_RIGHT)
+    #и так далее
+    
+    prev_points = np.array(breathing_landmarks+right_cheek_points, dtype=np.float32)
     frame_count = 0
     while cap.isOpened():
         ret, frame = cap.read()
@@ -58,6 +79,7 @@ def process_video(video_path):
             timestamps.append(frame_count / fps) 
         for (x, y) in next_points:
             cv2.circle(frame, (int(x), int(y)), 2, (0, 255, 0), -1)
+            #cv2.polylines(frame, [np.array(right_cheek_points, dtype=np.int32)], isClosed=True, color=(0, 255, 0), thickness=1)
         cv2.imshow('Breathing Tracking', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -78,5 +100,5 @@ def process_video(video_path):
     plt.legend()
     plt.show()
 
-video_path = 'any_vid.mp4'
+video_path = 'dataset/vidMe1.mp4'
 process_video(video_path)
