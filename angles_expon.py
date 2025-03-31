@@ -6,7 +6,7 @@ import numpy as np
 import mediapipe as mp
 
 N = 5
-counter = 0
+alpha = 0.6  # Коэффициент сглаживания (чем меньше, тем более плавный эффект)
 yaw = pitch = roll = 0
 yaw_buffer = deque(maxlen=N)
 pitch_buffer = deque(maxlen=N)
@@ -44,15 +44,7 @@ camera_matrix = np.array([
 
 # === Захват видео с веб-камеры ===
 cap = cv2.VideoCapture(0)
-# cap = cv2.VideoCapture("D:\\Downloads\\Telegram Desktop\\IMG_7628.MOV")
 
-# === Настройки записи видео ===
-# output_path = "many_faces.mp4"  # Имя выходного файла
-# fourcc = cv2.VideoWriter_fourcc(*'MP4V')  # Кодек (можно заменить на 'MP4V' для .mp4)
-# fps = int(cap.get(cv2.CAP_PROP_FPS))  # Частота кадров
-# frame_size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-# rapid = 1 # Флаг для ускорения
-# out_video = cv2.VideoWriter(output_path, fourcc, fps, frame_size)
 # === Цикл обработки видео ===
 while cap.isOpened():
     ret, frame = cap.read()
@@ -86,7 +78,7 @@ while cap.isOpened():
     indices = cv2.dnn.NMSBoxes(
         [f[:4] for f in faces], [f[4] for f in faces], conf_threshold, nms_threshold
     )
-    if len(indices) == 1:
+    if len(indices) > 0:
         for i in indices.flatten():
             x, y, w, h, _ = faces[i]
 
@@ -114,25 +106,28 @@ while cap.isOpened():
 
                     # === Решаем PnP для определения поворота головы ===
                     _, rotation_vector, translation_vector = cv2.solvePnP(
-                        model_points, image_points, camera_matrix, None, flags=cv2.SOLVEPNP_SQPNP)
+                        model_points, image_points, camera_matrix, None, flags=cv2.SOLVEPNP_ITERATIVE
+                    )
 
                     # Конвертация в углы поворота
                     rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
                     angles, _, _, _, _, _ = cv2.RQDecomp3x3(rotation_matrix)
                     yaw, pitch, roll = angles[1], angles[0], angles[2]
 
-                    # if(pitch > 90):
-                    #     pitch = 180 - pitch
-                    # elif(pitch < -90):
-                    #     pitch = -(180 + pitch)
+                    if(pitch > 90):
+                        pitch = 180 - pitch
+                    elif(pitch < -90):
+                        pitch = -(180 + pitch)
 
-                    yaw_buffer.append(yaw)
-                    pitch_buffer.append(pitch)
-                    roll_buffer.append(roll)
+                    # Для каждого угла
+                    smooth_yaw = alpha * yaw + (1 - alpha) * yaw_buffer[-1] if yaw_buffer else alpha * yaw
+                    smooth_pitch = alpha * pitch + (1 - alpha) * pitch_buffer[-1] if pitch_buffer else alpha * pitch
+                    smooth_roll = alpha * roll + (1 - alpha) * roll_buffer[-1] if roll_buffer else alpha * roll
 
-                    smooth_yaw = np.median(yaw_buffer)
-                    smooth_pitch = np.median(pitch_buffer)
-                    smooth_roll = np.median(roll_buffer)
+                    # Добавляем текущие значения в буфер
+                    yaw_buffer.append(smooth_yaw)
+                    pitch_buffer.append(smooth_pitch)
+                    roll_buffer.append(smooth_roll)
 
                     # === Отображение информации ===
                     cv2.putText(frame, f"Yaw: {smooth_yaw:.2f}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
@@ -144,16 +139,11 @@ while cap.isOpened():
                         cv2.circle(frame, (int(point[0]), int(point[1])), 3, (0, 0, 255), -1)
 
                     # Отрисовка рамки лица
-                    if(abs(smooth_yaw) <= 10 and abs(smooth_pitch) >= 170 and abs(smooth_roll) <= 10):
+                    if(abs(smooth_yaw) <= 10 and abs(smooth_pitch) <= 7 and abs(smooth_roll) <= 10):
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                        # rapid = 0
                     else:
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)   
-            # counter += 1
-    else:
-        cv2.putText(frame, "There should be 1 face in the frame!", (200, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-    # === Отображение результата ===
-    # out_video.write(frame)  # Запись кадра в файл
+
 
     cv2.imshow("Head Pose Estimation with YOLO", frame)
 
@@ -163,5 +153,4 @@ while cap.isOpened():
 
 # === Освобождение ресурсов ===
 cap.release()
-# out_video.release()  # Освобождение видеопотока записи
 cv2.destroyAllWindows()
