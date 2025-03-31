@@ -12,6 +12,9 @@ yaw_buffer = deque(maxlen=N)
 pitch_buffer = deque(maxlen=N)
 roll_buffer = deque(maxlen=N)
 
+# Буферы для сглаживания ключевых точек
+landmark_buffers = [deque(maxlen=N) for _ in range(6)]
+
 # === Инициализация YOLO ===
 yolo_net = cv2.dnn.readNet("models/yolov4-tiny-3l_best.weights", "models/yolov4-tiny-3l.cfg")  # Файлы YOLO
 layer_names = yolo_net.getLayerNames()
@@ -44,15 +47,7 @@ camera_matrix = np.array([
 
 # === Захват видео с веб-камеры ===
 cap = cv2.VideoCapture(0)
-# cap = cv2.VideoCapture("D:\\Downloads\\Telegram Desktop\\IMG_7628.MOV")
 
-# === Настройки записи видео ===
-# output_path = "many_faces.mp4"  # Имя выходного файла
-# fourcc = cv2.VideoWriter_fourcc(*'MP4V')  # Кодек (можно заменить на 'MP4V' для .mp4)
-# fps = int(cap.get(cv2.CAP_PROP_FPS))  # Частота кадров
-# frame_size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-# rapid = 1 # Флаг для ускорения
-# out_video = cv2.VideoWriter(output_path, fourcc, fps, frame_size)
 # === Цикл обработки видео ===
 while cap.isOpened():
     ret, frame = cap.read()
@@ -61,7 +56,6 @@ while cap.isOpened():
     if frame is None:
         continue
 
-    # Отзеркалим изображение для удобства
     frame = cv2.flip(frame, 1)
     height, width, _ = frame.shape
 
@@ -76,55 +70,46 @@ while cap.isOpened():
             scores = detection[5:]
             confidence = max(scores)
             if confidence > conf_threshold:
-                # Координаты ограничивающей рамки
                 center_x, center_y, w, h = (detection[0:4] * np.array([width, height, width, height])).astype("int")
                 x = int(center_x - w / 2)
                 y = int(center_y - h / 2)
                 faces.append((x, y, w, h, confidence))
 
-    # Подавление незначимых рамок (NMS)
     indices = cv2.dnn.NMSBoxes(
         [f[:4] for f in faces], [f[4] for f in faces], conf_threshold, nms_threshold
     )
     if len(indices) == 1:
         for i in indices.flatten():
             x, y, w, h, _ = faces[i]
-
-            # Ограничим область лица
             face_roi = frame[y:y+h, x:x+w]
             if face_roi.size == 0:
-                continue  # Пропускаем обработку, если ROI пустой
-            # Преобразуем в RGB для MediaPipe
+                continue
             rgb_face = cv2.cvtColor(face_roi, cv2.COLOR_BGR2RGB)
 
-            # === Обнаружение ключевых точек лица ===
             results = face_mesh.process(rgb_face)
 
             if results.multi_face_landmarks:
                 for face_landmarks in results.multi_face_landmarks:
-                    # Извлекаем координаты 6 ключевых точек (переводим в глобальные координаты кадра)
+                    raw_points = [
+                        (face_landmarks.landmark[idx].x * w + x, face_landmarks.landmark[idx].y * h + y)
+                        for idx in [1, 199, 33, 263, 61, 291]
+                    ]
+                    
+                    # Добавляем точки в буфер и усредняем
+                    for j, point in enumerate(raw_points):
+                        landmark_buffers[j].append(point)
+                    
                     image_points = np.array([
-                        [face_landmarks.landmark[1].x * w + x, face_landmarks.landmark[1].y * h + y],  # Кончик носа
-                        [face_landmarks.landmark[199].x * w + x, face_landmarks.landmark[199].y * h + y],  # Подбородок
-                        [face_landmarks.landmark[33].x * w + x, face_landmarks.landmark[33].y * h + y],  # Левый глаз
-                        [face_landmarks.landmark[263].x * w + x, face_landmarks.landmark[263].y * h + y],  # Правый глаз
-                        [face_landmarks.landmark[61].x * w + x, face_landmarks.landmark[61].y * h + y],  # Левый угол рта
-                        [face_landmarks.landmark[291].x * w + x, face_landmarks.landmark[291].y * h + y]   # Правый угол рта
+                        np.mean(landmark_buffers[j], axis=0) for j in range(6)
                     ], dtype=np.float64)
-
-                    # === Решаем PnP для определения поворота головы ===
+                    
+                    # === Решаем PnP ===
                     _, rotation_vector, translation_vector = cv2.solvePnP(
                         model_points, image_points, camera_matrix, None, flags=cv2.SOLVEPNP_SQPNP)
-
-                    # Конвертация в углы поворота
+                    
                     rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
                     angles, _, _, _, _, _ = cv2.RQDecomp3x3(rotation_matrix)
                     yaw, pitch, roll = angles[1], angles[0], angles[2]
-
-                    # if(pitch > 90):
-                    #     pitch = 180 - pitch
-                    # elif(pitch < -90):
-                    #     pitch = -(180 + pitch)
 
                     yaw_buffer.append(yaw)
                     pitch_buffer.append(pitch)
@@ -134,34 +119,24 @@ while cap.isOpened():
                     smooth_pitch = np.median(pitch_buffer)
                     smooth_roll = np.median(roll_buffer)
 
-                    # === Отображение информации ===
                     cv2.putText(frame, f"Yaw: {smooth_yaw:.2f}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
                     cv2.putText(frame, f"Pitch: {smooth_pitch:.2f}", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
                     cv2.putText(frame, f"Roll: {smooth_roll:.2f}", (30, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-                    # Рисуем ключевые точки
                     for point in image_points:
                         cv2.circle(frame, (int(point[0]), int(point[1])), 3, (0, 0, 255), -1)
-
-                    # Отрисовка рамки лица
-                    if(abs(smooth_yaw) <= 10 and abs(smooth_pitch) >= 170 and abs(smooth_roll) <= 10):
+                    
+                    if(abs(smooth_yaw) <= 10 and smooth_yaw <= 3.5 and abs(smooth_pitch) >= 170 and abs(smooth_roll) <= 10):
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                        # rapid = 0
                     else:
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)   
-            # counter += 1
     else:
-        cv2.putText(frame, "There should be 1 face in the frame!", (200, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-    # === Отображение результата ===
-    # out_video.write(frame)  # Запись кадра в файл
+        cv2.putText(frame, "There should be 1 face in the frame!", (200, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
     cv2.imshow("Head Pose Estimation with YOLO", frame)
 
-    # Выход по ESC
     if cv2.waitKey(1) & 0xFF == 27:
         break
 
-# === Освобождение ресурсов ===
 cap.release()
-# out_video.release()  # Освобождение видеопотока записи
 cv2.destroyAllWindows()
