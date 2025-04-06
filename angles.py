@@ -103,6 +103,7 @@ while cap.isOpened():
                         np.mean(landmark_buffers[j], axis=0) for j in range(6)
                     ], dtype=np.float64)
                     
+                    
                     # === Решаем PnP ===
                     _, rotation_vector, translation_vector = cv2.solvePnP(
                         model_points, image_points, camera_matrix, None, flags=cv2.SOLVEPNP_SQPNP)
