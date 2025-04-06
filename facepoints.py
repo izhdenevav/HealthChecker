@@ -29,7 +29,7 @@ def extract_all_landmarks(frame):
         for face_landmarks in results.multi_face_landmarks:
             for landmark in face_landmarks.landmark:
                 h, w, _ = frame.shape
-                x, y = int(landmark.x * w), int(landmark.y * h)
+                x, y = landmark.x * w, landmark.y * h
                 landmarks.append((x, y))
     return landmarks
 
@@ -54,14 +54,14 @@ def get_eyebrows_landmarks(all_landmarks):
             showing_landmarks.append(all_landmarks[idx])
     return showing_landmarks
 
-def get_cheeckL_landmarks(all_landmarks):
+def get_cheekL_landmarks(all_landmarks):
     showing_landmarks = []
     for idx in CHEEK_LEFT:
         if idx < len(all_landmarks):
             showing_landmarks.append(all_landmarks[idx])
     return showing_landmarks
 
-def get_cheeckR_landmarks(all_landmarks):
+def get_cheekR_landmarks(all_landmarks):
     showing_landmarks = []
     for idx in CHEEK_RIGHT:
         if idx < len(all_landmarks):
