@@ -35,51 +35,50 @@ def extract_all_landmarks(frame):
 
 def get_breathing_landmarks(all_landmarks):
     showing_landmarks = []
-    for idx, landmark in enumerate(all_landmarks):
-        if (idx in BREATHING_LANDMARKS) and (landmark not in showing_landmarks):
-            showing_landmarks.append(landmark)
+    for idx in BREATHING_LANDMARKS:
+        if idx < len(all_landmarks):
+            showing_landmarks.append(all_landmarks[idx])
     return showing_landmarks
 
 def get_nose_landmarks(all_landmarks):
     showing_landmarks = []
-    for idx, landmark in enumerate(all_landmarks):
-        if (idx in NOSE_BRIDGE) and (landmark not in showing_landmarks):
-            showing_landmarks.append(landmark)
+    for idx in NOSE_BRIDGE:
+        if idx < len(all_landmarks):
+            showing_landmarks.append(all_landmarks[idx])
     return showing_landmarks
 
 def get_eyebrows_landmarks(all_landmarks):
     showing_landmarks = []
-    for idx, landmark in enumerate(all_landmarks):
-        if (idx in BETWEEN_EYEBROWS) and (landmark not in showing_landmarks):
-            showing_landmarks.append(landmark)
+    for idx in BETWEEN_EYEBROWS:
+        if idx < len(all_landmarks):
+            showing_landmarks.append(all_landmarks[idx])
     return showing_landmarks
 
 def get_cheeckL_landmarks(all_landmarks):
     showing_landmarks = []
-    for idx, landmark in enumerate(all_landmarks):
-        if (idx in CHEEK_LEFT) and (landmark not in showing_landmarks):
-            showing_landmarks.append(landmark)
+    for idx in CHEEK_LEFT:
+        if idx < len(all_landmarks):
+            showing_landmarks.append(all_landmarks[idx])
     return showing_landmarks
 
 def get_cheeckR_landmarks(all_landmarks):
     showing_landmarks = []
-    for idx, landmark in enumerate(all_landmarks):
-        if (idx in CHEEK_RIGHT) and (landmark not in showing_landmarks):
-            showing_landmarks.append(landmark)
+    for idx in CHEEK_RIGHT:
+        if idx < len(all_landmarks):
+            showing_landmarks.append(all_landmarks[idx])
     return showing_landmarks
 
 def get_face_tracking_landmarks(all_landmarks):
     showing_landmarks = []
-    for idx, landmark in enumerate(all_landmarks):
-        if (idx in FACE_TRACKING) and (landmark not in showing_landmarks):
-            showing_landmarks.append(landmark)
+    for idx in FACE_TRACKING:
+        if idx < len(all_landmarks):
+            showing_landmarks.append(all_landmarks[idx])
     return showing_landmarks
 
-#Если надо достать точки на той части лица, которых нет в списке поддерживаемых
-def get_custom_landmarks(landmarks, *selected_indices_arrays):
+def get_custom_landmarks(all_landmarks, *selected_indices_arrays):
     showing_landmarks = []
-    for idx, landmark in enumerate(landmarks):
-        for selected_indices in selected_indices_arrays:
-            if (idx in selected_indices) and (landmark not in showing_landmarks):
-                showing_landmarks.append(landmark)
+    for indices in selected_indices_arrays:
+        for idx in indices:
+            if idx < len(all_landmarks):
+                showing_landmarks.append(all_landmarks[idx])
     return showing_landmarks
