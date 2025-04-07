@@ -49,8 +49,8 @@ def check_position(frame, landmark_buffers, yaw_buffer, pitch_buffer, roll_buffe
         np.mean(landmark_buffers[j], axis=0) for j in range(6)
     ], dtype=np.float64)
     # print(image_points)
-    for point in image_points:
-        cv2.circle(frame, (int(point[0]), int(point[1])), 3, (0, 0, 255), -1)
+    # for point in image_points:
+    #     cv2.circle(frame, (int(point[0]), int(point[1])), 3, (0, 0, 255), -1)
 
     # === Решаем PnP ===
     _, rotation_vector, translation_vector = cv2.solvePnP(
@@ -73,11 +73,11 @@ def check_position(frame, landmark_buffers, yaw_buffer, pitch_buffer, roll_buffe
     smooth_pitch = np.median(pitch_buffer)
     smooth_roll = np.median(roll_buffer)
 
-    cv2.putText(frame, f"Yaw: {smooth_yaw:.2f}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-    cv2.putText(frame, f"Pitch: {smooth_pitch:.2f}", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-    cv2.putText(frame, f"Roll: {smooth_roll:.2f}", (30, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    # cv2.putText(frame, f"Yaw: {smooth_yaw:.2f}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    # cv2.putText(frame, f"Pitch: {smooth_pitch:.2f}", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    # cv2.putText(frame, f"Roll: {smooth_roll:.2f}", (30, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-    if(abs(smooth_yaw) <= 10 and smooth_yaw <= 3 and abs(smooth_pitch) <= 7 and abs(smooth_roll) <= 10):
+    if(abs(smooth_yaw) <= 15 and smooth_yaw <= 3 and abs(smooth_pitch) <= 7 and abs(smooth_roll) <= 10):
         return True
     return False
 
