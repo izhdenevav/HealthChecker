@@ -10,6 +10,14 @@ import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+N = 5
+# Буферы для сглаживания ключевых точек
+landmark_buffers = [deque(maxlen=N) for _ in range(6)]
+yaw_buffer = deque(maxlen=N)
+pitch_buffer = deque(maxlen=N)
+roll_buffer = deque(maxlen=N)
+FLAG = False
+
 def check_position(frame, landmark_buffers, yaw_buffer, pitch_buffer, roll_buffer):
     # === 3D модель ключевых точек головы ===
     model_points = np.array([
@@ -73,24 +81,21 @@ def check_position(frame, landmark_buffers, yaw_buffer, pitch_buffer, roll_buffe
     smooth_pitch = np.median(pitch_buffer)
     smooth_roll = np.median(roll_buffer)
 
+    if (abs(yaw-smooth_yaw) >= 10) or (abs(roll-smooth_roll) >= 10) or (abs(pitch-smooth_pitch) >= 10):
+        FLAG = False
     # cv2.putText(frame, f"Yaw: {smooth_yaw:.2f}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
     # cv2.putText(frame, f"Pitch: {smooth_pitch:.2f}", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
     # cv2.putText(frame, f"Roll: {smooth_roll:.2f}", (30, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-    if(abs(smooth_yaw) <= 15 and smooth_yaw <= 3 and abs(smooth_pitch) <= 7 and abs(smooth_roll) <= 10):
+    if(abs(smooth_yaw) <= 10 and smooth_yaw <= 3 and abs(smooth_pitch) <= 7 and abs(smooth_roll) <= 10):
+        FLAG = True
         return True
+    FLAG = False
     return False
 
-
+# Это можно удалить!!!
 if __name__ == "__main__":
     cap = cv2.VideoCapture(0)
-
-    N = 5
-    # Буферы для сглаживания ключевых точек
-    landmark_buffers = [deque(maxlen=N) for _ in range(6)]
-    yaw_buffer = deque(maxlen=N)
-    pitch_buffer = deque(maxlen=N)
-    roll_buffer = deque(maxlen=N)
 
     # === Цикл обработки видео ===
     while cap.isOpened():
