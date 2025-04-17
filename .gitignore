@@ -176,4 +176,8 @@ cython_debug/
 *.json
 *.mp4
 metrics.ipynb
-test.py
+classification.py
+facepoints.py
+test_acc.py
+0
+1

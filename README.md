@@ -1,4 +1,4 @@
-# Branch Arina
+# Head pose estimation
 
 This function estimates the **head rotation angles** (yaw, pitch, roll) for each detected face and returns True or False.
 
