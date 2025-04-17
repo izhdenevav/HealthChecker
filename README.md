@@ -50,3 +50,6 @@ python main.py
 - Если в проект добавляются новые зависимости, обновите `requirements.txt` командой:
   ```sh
   pip freeze > requirements.txt
+
+
+
