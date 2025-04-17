@@ -1,23 +1,52 @@
-# Head pose estimation
+=======
+# ОПРЕДЕЛЕНИЕ ЧСС И ПОКАЗАТЕЛЕЙ ДЫХАНИЯ С УЧЕТОМ ПОВОРОТА ГОЛОВЫ
 
-This function estimates the **head rotation angles** (yaw, pitch, roll) for each detected face and returns True or False.
+## Установка и запуск
 
-## Installation & Run
+### 1. Клонируйте репозиторий:
+   ```sh
+   git clone https://github.com/izhdenevav/ml_project.git
+   cd ml_project
+   ```
 
-To install the required dependencies and run the project, use the following commands:
+### 2. Создайте виртуальное окружение:
 
+```sh
+python -m venv venv
 ```
-bash
+
+### 3. Активируйте окружение:
+
+#### Windows:
+```sh
+venv\Scripts\activate
+```
+
+#### Linux/macOS:
+```sh
+source venv/bin/activate
+```
+
+### 3. Установите зависимости:
+
+```sh
 pip install -r requirements.txt
-python angle_fun.py
-```  
+```
 
-## Using in code  
-You need to define the following buffers:  
+## Запустите проект:
+
+После установки зависимостей можно запускать проект:
+
+```sh
+python main.py
 ```
-N = 5  
-landmark_buffers = [deque(maxlen=N) for _ in range(6)]  
-yaw_buffer = deque(maxlen=N)  
-pitch_buffer = deque(maxlen=N)  
-roll_buffer = deque(maxlen=N)
-```
+
+## Дополнительно
+
+- Для выхода из виртуального окружения используйте команду:
+  ```sh
+  deactivate
+  ```
+- Если в проект добавляются новые зависимости, обновите `requirements.txt` командой:
+  ```sh
+  pip freeze > requirements.txt
