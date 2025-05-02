@@ -15,6 +15,9 @@ def extract_face_regions(frame):
     return regions
 
 def get_facial_regions_means(frame, regions):
+    if not regions:
+        return None
+    
     means = {}
 
     for region, coords in regions.items():
