@@ -4,9 +4,13 @@ from collections import deque
 
 import cv2
 import numpy as np
+import torch
+from scipy.signal import find_peaks
 
 from . import facepoints
-
+from . import data_preprocessing
+from . import decompose_module
+from . import srrn
 
 # Класс обработки кадров(код арины)
 class FrameProcessor:
@@ -16,6 +20,11 @@ class FrameProcessor:
         self.yaw_buffer = deque(maxlen=self.N)
         self.pitch_buffer = deque(maxlen=self.N)
         self.roll_buffer = deque(maxlen=self.N)
+        self.frames_per_calculation = 300
+        self.frames_cnt = 0
+        self.spatial_temporal_map = []
+        self.model = srrn.SRRN(in_channels=3, R=4, T=300)
+        self.bpm = 0.0
 
         # === Параметры камеры ===
         self.model_points = np.array([
@@ -79,9 +88,42 @@ class FrameProcessor:
         cv2.putText(frame, f"Yaw: {smooth_yaw:.2f}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         cv2.putText(frame, f"Pitch: {smooth_pitch:.2f}", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         cv2.putText(frame, f"Roll: {smooth_roll:.2f}", (30, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.putText(frame, f"HR: {self.bpm:.1f}", (30, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
         if (abs(smooth_yaw) <= 10 and smooth_yaw <= 3 and abs(smooth_pitch) <= 7 and abs(smooth_roll) <= 10):
             cv2.putText(frame, "Correct!", (30, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+            if self.frames_cnt <= self.frames_per_calculation:
+                print(self.frames_cnt)
+                csc = data_preprocessing.apply_color_space_conversion(frame)
+                self.spatial_temporal_map.append(csc)
+
+                self.frames_cnt += 1
+            else:
+                tdn = data_preprocessing.apply_time_domain_normalization(self.spatial_temporal_map)
+                noised = data_preprocessing.add_white_noise(tdn)
+
+                # [С, R, T]
+                processed_data = decompose_module.DCTiDCT(noised, number_of_stripes=4, fps=30)
+                # [1, C, R, T]
+                data = np.expand_dims(processed_data, axis=0)
+
+                data_tensor = torch.tensor(data, dtype=torch.float32)
+
+                with torch.no_grad():
+                    bvp_signal = self.model(data_tensor)
+
+                sig = bvp_signal[0]
+
+                peaks, _ = find_peaks(sig, distance=0.5*30, height=np.percentile(sig, 75))
+
+                num_beats = len(peaks) - 1
+                duration_s = len(sig) / 30
+                bpm = num_beats / duration_s * 60
+                self.bpm = bpm
+
+                self.frames_cnt = 0
+                self.spatial_temporal_map = []
         else:
             cv2.putText(frame, "Change position!", (30, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
