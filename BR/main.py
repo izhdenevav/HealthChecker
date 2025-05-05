@@ -47,7 +47,7 @@ def main():
     finally:
         cap.release()
         cv2.destroyAllWindows()
-        cg_raw, cg_filtered = signal_processor.get_all_data()
+        """cg_raw, cg_filtered = signal_processor.get_all_data()
         if cg_raw.size > 0:
             plt.figure(figsize=(12, 8))
             
@@ -65,7 +65,7 @@ def main():
                 plt.grid(True)
             
             plt.tight_layout()
-            plt.show()
+            plt.show()"""
 
 if __name__ == "__main__":
     main()

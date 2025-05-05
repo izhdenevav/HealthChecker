@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import mediapipe as mp
 
-class KalmanFilter:
+"""class KalmanFilter:
     def __init__(self, process_noise=1e-6, measurement_noise=1e-3, error_cov=1.0):
         self.state_size = 4
         self.measurement_size = 2
@@ -26,7 +26,7 @@ class KalmanFilter:
         self.error_cov = predicted_error_cov - np.dot(np.dot(K, self.measurementMatrix), predicted_error_cov)
         predicted = np.dot(self.transitionMatrix, self.state)
         return predicted[0, 0], predicted[1, 0]
-
+"""
 class FaceProcessor:
     def __init__(self):
         self.mp_face_mesh = mp.solutions.face_mesh
@@ -43,9 +43,6 @@ class FaceProcessor:
             'right_cheek': 330  # Правая щека
         }
         
-        #self.kf_left = KalmanFilter()
-        #self.kf_right = KalmanFilter()
-
     def _get_face_size(self, landmarks, frame_width):
         left_eye = landmarks[33] 
         right_eye = landmarks[263]
@@ -90,19 +87,3 @@ class FaceProcessor:
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.face_mesh.process(rgb_frame)
         return results.multi_face_landmarks[0].landmark if results.multi_face_landmarks else None
-
-"""if __name__ == "__main__":
-    cap = cv2.VideoCapture(0)
-    processor = FaceProcessor()
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        processed_frame, rois = processor.process_frame(frame)
-        cv2.imshow("Face ROI (Final)", processed_frame)
-        key = cv2.waitKey(1)   
-        if key == ord('q') or key == 27:  # 27 — код ESC
-            break
-    
-    cap.release()
-    cv2.destroyAllWindows()"""
