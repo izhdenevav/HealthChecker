@@ -11,6 +11,7 @@ from decompose_module import DCTiDCT
 
 class PulseSegmentDataset(Dataset):
     def __init__(self, segments_dir, ann_path, fps=30, stripe_count=4):
+        
         self.segments = sorted(os.listdir(segments_dir))
         with open(ann_path, 'r') as f:
             self.annotations = json.load(f)
