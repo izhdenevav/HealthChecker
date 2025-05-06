@@ -1,3 +1,7 @@
 /.venv/
 /.venv1/
 /.idea/
+/__pycache__/
+/webheadpose/webheadpose/__pycache__/
+/webheadpose/.idea/
+/webheadpose/videodelivery/__pycache__/

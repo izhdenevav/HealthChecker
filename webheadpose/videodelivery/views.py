@@ -11,6 +11,8 @@ from . import facepoints
 from . import data_preprocessing
 from . import decompose_module
 from . import srrn
+from . import face_processor
+from . import signal_processing
 
 # Класс обработки кадров(код арины)
 class FrameProcessor:
@@ -25,6 +27,8 @@ class FrameProcessor:
         self.spatial_temporal_map = []
         self.model = srrn.SRRN(in_channels=3, R=4, T=300)
         self.bpm = 0.0
+        self.face_processor = face_processor.FaceProcessor()
+        self.signal_processor = signal_processing.SignalProcessor(max_frames=10000)
 
         # === Параметры камеры ===
         self.model_points = np.array([
@@ -126,6 +130,15 @@ class FrameProcessor:
                 self.spatial_temporal_map = []
         else:
             cv2.putText(frame, "Change position!", (30, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+        processed_frame, rois = self.face_processor.process_frame(frame)
+        if rois:
+            self.signal_processor.process(frame, rois)
+        
+        status_color = (0, 255, 0) 
+        cv2.putText(frame, 
+                    f"Status: {'ANALYZING'}",
+                    (30, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
 
         return frame
 
