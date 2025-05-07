@@ -54,7 +54,7 @@ def main():
             if key == ord('q') or key == 27:
                 break
     finally:
-        cap.release()
+        """cap.release()
         cv2.destroyAllWindows()
         cg_raw, cg_filtered = signal_processor.get_all_data()
         if cg_raw.size > 0:
@@ -74,7 +74,7 @@ def main():
                 plt.grid(True)
             
             plt.tight_layout()
-            plt.show()
+            plt.show()"""
 
 if __name__ == "__main__":
     main()
