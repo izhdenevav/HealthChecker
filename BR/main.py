@@ -3,8 +3,8 @@ from collections import deque
 from angle_fun import check_position
 from face_processor import FaceProcessor
 from signal_processing import SignalProcessor
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 
 N = 10
 landmark_buffers = [deque(maxlen=N) for _ in range(6)]
@@ -15,10 +15,12 @@ roll_buffer = deque(maxlen=N)
 def main():
     face_processor = FaceProcessor()
     signal_processor = SignalProcessor(max_frames=10000)
-    cap = cv2.VideoCapture('./dataset/vidMe1.mp4')
+    cap = cv2.VideoCapture('./dataset/nobreathe.mp4')
     cv2.namedWindow("Face ROI (Final)", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Face ROI (Final)", 600, 800)
+    cv2.resizeWindow("Face ROI (Final)", 1250, 1500)
     
+    br_value = None
+
     try:
         while cap.isOpened():
             ret, frame = cap.read()
@@ -33,12 +35,19 @@ def main():
             
             processed_frame, rois = face_processor.process_frame(frame)
             if rois:
-                signal_processor.process(frame, rois)
+                filtered_value, br = signal_processor.process(frame, rois)
+                if br is not None:
+                    br_value = br
             
             status_color = (0, 255, 0) 
             cv2.putText(processed_frame, 
                         f"Status: {'ANALYZING'}",
                         (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
+            if br_value is not None:
+                cv2.putText(processed_frame,
+                            f"BR: {br_value:.2f} breaths/min",
+                            (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+            
             cv2.imshow("Face ROI (Final)", processed_frame)
             
             key = cv2.waitKey(1)
@@ -47,7 +56,7 @@ def main():
     finally:
         cap.release()
         cv2.destroyAllWindows()
-        """cg_raw, cg_filtered = signal_processor.get_all_data()
+        cg_raw, cg_filtered = signal_processor.get_all_data()
         if cg_raw.size > 0:
             plt.figure(figsize=(12, 8))
             
@@ -65,7 +74,7 @@ def main():
                 plt.grid(True)
             
             plt.tight_layout()
-            plt.show()"""
+            plt.show()
 
 if __name__ == "__main__":
     main()
