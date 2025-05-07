@@ -17,7 +17,8 @@ from . import signal_processing
 # Класс обработки кадров(код арины)
 class FrameProcessor:
     def __init__(self):
-        self.N = 5
+        self.N = 10
+        self.br_value = None
         self.landmark_buffers = [deque(maxlen=self.N) for _ in range(6)]
         self.yaw_buffer = deque(maxlen=self.N)
         self.pitch_buffer = deque(maxlen=self.N)
@@ -97,6 +98,21 @@ class FrameProcessor:
         if (abs(smooth_yaw) <= 10 and smooth_yaw <= 3 and abs(smooth_pitch) <= 7 and abs(smooth_roll) <= 10):
             cv2.putText(frame, "Correct!", (30, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
+            processed_frame, rois = self.face_processor.process_frame(frame)
+            if rois:
+                filtered_value, br = self.signal_processor.process(frame, rois)
+                if br is not None:
+                    br_value = br
+            
+            status_color = (0, 255, 0) 
+            cv2.putText(frame, 
+                        f"Status: {'ANALYZING'}",
+                        (30, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
+            if br_value is not None:
+                cv2.putText(processed_frame,
+                            f"BR: {br_value:.2f} breaths/min",
+                            (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+
             if self.frames_cnt <= self.frames_per_calculation:
                 print(self.frames_cnt)
                 csc = data_preprocessing.apply_color_space_conversion(frame)
@@ -130,15 +146,6 @@ class FrameProcessor:
                 self.spatial_temporal_map = []
         else:
             cv2.putText(frame, "Change position!", (30, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-
-        processed_frame, rois = self.face_processor.process_frame(frame)
-        if rois:
-            self.signal_processor.process(frame, rois)
-        
-        status_color = (0, 255, 0) 
-        cv2.putText(frame, 
-                    f"Status: {'ANALYZING'}",
-                    (30, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
 
         return frame
 
