@@ -11,11 +11,14 @@ from . import facepoints
 from . import data_preprocessing
 from . import decompose_module
 from . import srrn
+from . import face_processor
+from . import signal_processing
 
 # Класс обработки кадров(код арины)
 class FrameProcessor:
     def __init__(self):
-        self.N = 5
+        self.N = 10
+        self.br_value = 0
         self.landmark_buffers = [deque(maxlen=self.N) for _ in range(6)]
         self.yaw_buffer = deque(maxlen=self.N)
         self.pitch_buffer = deque(maxlen=self.N)
@@ -25,6 +28,8 @@ class FrameProcessor:
         self.spatial_temporal_map = []
         self.model = srrn.SRRN(in_channels=3, R=4, T=300)
         self.bpm = 0.0
+        self.face_processor = face_processor.FaceProcessor()
+        self.signal_processor = signal_processing.SignalProcessor(max_frames=10000)
 
         # === Параметры камеры ===
         self.model_points = np.array([
@@ -89,10 +94,18 @@ class FrameProcessor:
         cv2.putText(frame, f"Pitch: {smooth_pitch:.2f}", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         cv2.putText(frame, f"Roll: {smooth_roll:.2f}", (30, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         cv2.putText(frame, f"HR: {self.bpm:.1f}", (30, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-
+        cv2.putText(frame,
+                            f"BR: {self.br_value:.2f} breaths/min",
+                            (30, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         if (abs(smooth_yaw) <= 10 and smooth_yaw <= 3 and abs(smooth_pitch) <= 7 and abs(smooth_roll) <= 10):
             cv2.putText(frame, "Correct!", (30, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
+            processed_frame, rois = self.face_processor.process_frame(frame)
+            if rois:
+                filtered_value, br = self.signal_processor.process(frame, rois)
+                if br is not None:
+                    self.br_value = br
+            
             if self.frames_cnt <= self.frames_per_calculation:
                 print(self.frames_cnt)
                 csc = data_preprocessing.apply_color_space_conversion(frame)
