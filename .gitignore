@@ -1,3 +1,26 @@
-/.venv/
-/.venv1/
-/.idea/
+# Виртуальные окружения
+.venv/
+.venv1/
+
+# PyCharm
+.idea/
+**/.idea/
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# MacOS
+.DS_Store
+
+# Swap-файлы
+*.swp
+*.swo
+
+# Логи
+*.log
+
+# Секретные переменные и env-файлы
+.env
