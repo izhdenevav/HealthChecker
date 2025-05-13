@@ -20,6 +20,7 @@ class FrameHeadProcessor:
         self.yaw_buffer = deque(maxlen=self.N)
         self.pitch_buffer = deque(maxlen=self.N)
         self.roll_buffer = deque(maxlen=self.N)
+        self.flag = False
 
         # === Параметры камеры ===
         self.model_points = np.array([
@@ -80,14 +81,16 @@ class FrameHeadProcessor:
         smooth_roll = np.median(self.roll_buffer)
 
         # Вывод текста на кадр
-        cv2.putText(frame, f"Yaw: {smooth_yaw:.2f}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        cv2.putText(frame, f"Pitch: {smooth_pitch:.2f}", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        cv2.putText(frame, f"Roll: {smooth_roll:.2f}", (30, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        # cv2.putText(frame, f"Yaw: {smooth_yaw:.2f}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        # cv2.putText(frame, f"Pitch: {smooth_pitch:.2f}", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        # cv2.putText(frame, f"Roll: {smooth_roll:.2f}", (30, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
         if (abs(smooth_yaw) <= 10 and smooth_yaw <= 3 and abs(smooth_pitch) <= 7 and abs(smooth_roll) <= 10):
             cv2.putText(frame, "Correct!", (30, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        else:
+            self.flag = True
+        elif(self.flag==False or abs(smooth_yaw) >= 14 or smooth_yaw >= 5 or abs(smooth_pitch) >= 10 or abs(smooth_roll) >= 14):
             cv2.putText(frame, "Change position!", (30, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            self.flag = False
 
         return frame
 
