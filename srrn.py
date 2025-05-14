@@ -61,6 +61,8 @@ class SRRN(nn.Module):
             combined = reconstruction_output
 
         out = self.final_conv(combined)
+        print(f"out before final_conv {out.shape}")
         out = self.global_pool(out).squeeze(2)
+        print(f"out before return {out.shape}")
         
         return out.squeeze(1)

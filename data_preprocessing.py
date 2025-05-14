@@ -21,6 +21,10 @@ def get_facial_regions_means(frame, regions):
     means = {}
 
     for region, coords in regions.items():
+        if coords is None or (isinstance(coords, (list, np.ndarray)) and len(coords) == 0):
+            means[region] = [0, 0, 0]
+            continue
+
         min_x = min(coords, key=lambda p: p[0])[0]
         max_x = max(coords, key=lambda p: p[0])[0]
         min_y = min(coords, key=lambda p: p[1])[1]
@@ -47,32 +51,62 @@ def rgb_to_yuv(means_rgb):
     return means_yuv
 
 def apply_color_space_conversion(frame):
+    if frame is None or frame.size == 0:
+        print("Ошибка: Пустой или некорректный кадр")
+        return None
+    
     # получаем координаты лицевых зон
     regions = extract_face_regions(frame)
+    if regions is None or not regions:
+        print("Ошибка: Не удалось извлечь регионы лица")
+        return None
+    
     # получаем средние для каждого региона
     facial_means_rgb = get_facial_regions_means(frame, regions)
+    if not facial_means_rgb:
+        print("Ошибка: Не удалось вычислить средние значения RGB")
+        return None
+    
     # переводим в yuv
     facial_means_yuv = rgb_to_yuv(facial_means_rgb)
     
     return facial_means_yuv
 
+# def apply_time_domain_normalization(spatial_temporal_map):
+#     normalized_map = {}
+
+#     regions = spatial_temporal_map[0].keys()
+
+#     for region in regions:
+#         values = np.array([frame[region] for frame in spatial_temporal_map])
+#         mean = values.mean(axis=0)
+#         std = values.std(axis=0) + 1e-8
+#         normalized = (values - mean) / std
+#         normalized_map[region] = normalized
+    
+#     return normalized_map
+
 def apply_time_domain_normalization(spatial_temporal_map):
-    normalized_map = {}
-
     regions = spatial_temporal_map[0].keys()
-
-    for region in regions:
-        values = np.array([frame[region] for frame in spatial_temporal_map])
+    C, R, T = 3, len(regions), len(spatial_temporal_map)
+    normalized = np.zeros((C, R, T))
+    
+    for r, region in enumerate(regions):
+        values = np.array([frame[region] for frame in spatial_temporal_map])  # [T, C]
         mean = values.mean(axis=0)
         std = values.std(axis=0) + 1e-8
-        normalized = (values - mean) / std
-        normalized_map[region] = normalized
+        normalized[:, r, :] = ((values - mean) / std).T  # [C, T]
     
-    return normalized_map
+    return normalized
 
-def add_white_noise(normalized_spatial_temporal_map, noise_std=0.1):
-    noisy_series = {}
-    for key, data in normalized_spatial_temporal_map.items():
-        noise = np.random.normal(0, noise_std, data.shape)
-        noisy_series[key] = data + noise
-    return noisy_series
+# def add_white_noise(normalized_spatial_temporal_map, noise_std=0.05):
+#     noisy_series = {}
+#     for key, data in normalized_spatial_temporal_map.items():
+#         noise = np.random.normal(0, noise_std, data.shape)
+#         noisy_series[key] = data + noise
+#     return noisy_series
+
+def add_white_noise(normalized_spatial_temporal_map, noise_std=0.05):
+    noise = np.random.normal(0, noise_std, normalized_spatial_temporal_map.shape)
+    noisy_map = normalized_spatial_temporal_map + noise
+    return noisy_map
