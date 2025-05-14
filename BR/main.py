@@ -12,15 +12,28 @@ yaw_buffer = deque(maxlen=N)
 pitch_buffer = deque(maxlen=N)
 roll_buffer = deque(maxlen=N)
 
+plt.ion()
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+ax1.set_title("Raw Cg Signal")
+ax2.set_title("Filtered Respiratory Signal")
+
+line_raw, = ax1.plot([], [], color='blue', label='Raw')
+ax1.legend()
+ax1.grid(True)
+line_filtered, = ax2.plot([], [], color='red', label='Filtered')
+ax2.legend()
+ax2.grid(True)
+
 def main():
     face_processor = FaceProcessor()
     signal_processor = SignalProcessor(max_frames=10000)
     cap = cv2.VideoCapture('./dataset/nobreathe.mp4')
     cv2.namedWindow("Face ROI (Final)", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Face ROI (Final)", 1250, 1500)
+    cv2.resizeWindow("Face ROI (Final)", 1000, 1300)
     
+    frame_counter = 0
     br_value = None
-
+    
     try:
         while cap.isOpened():
             ret, frame = cap.read()
@@ -50,31 +63,34 @@ def main():
             
             cv2.imshow("Face ROI (Final)", processed_frame)
             
+            frame_counter += 1
+            print(frame_counter)
+
+            if (frame_counter > 300) and (frame_counter % 30 == 0):
+                cg_raw, cg_filtered = signal_processor.get_all_data()
+                if cg_raw.size > 0:
+                    line_raw.set_data(np.arange(len(cg_raw)), cg_raw)
+                    ax1.relim()
+                    ax1.autoscale_view()
+                    if cg_filtered.size > 0:
+                        line_filtered.set_data(np.arange(len(cg_filtered)), cg_filtered)
+                        ax2.relim()
+                        ax2.autoscale_view()
+
+                    fig.canvas.draw()
+                    width, height = fig.get_size_inches() * fig.dpi
+                    width, height = int(width), int(height)
+                    image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8').reshape(height, width, 3)
+
+                    cv2.imshow("Plots", image)
+
             key = cv2.waitKey(1)
             if key == ord('q') or key == 27:
                 break
     finally:
-        """cap.release()
+        cap.release()
         cv2.destroyAllWindows()
-        cg_raw, cg_filtered = signal_processor.get_all_data()
-        if cg_raw.size > 0:
-            plt.figure(figsize=(12, 8))
-            
-            plt.subplot(2, 1, 1)
-            plt.plot(cg_raw, color='blue', label='Raw')
-            plt.title("Raw Cg Signal")
-            plt.legend()
-            plt.grid(True)
-            
-            if cg_filtered.size > 0:
-                plt.subplot(2, 1, 2)
-                plt.plot(cg_filtered, color='red', label='Filtered')
-                plt.title("Filtered Respiratory Signal")
-                plt.legend()
-                plt.grid(True)
-            
-            plt.tight_layout()
-            plt.show()"""
+        
 
 if __name__ == "__main__":
     main()
