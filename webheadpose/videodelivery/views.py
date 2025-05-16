@@ -1,6 +1,7 @@
 from django.http import StreamingHttpResponse
 from django.shortcuts import render
 from collections import deque
+from django.contrib.auth.decorators import login_required
 
 import cv2
 import numpy as np
@@ -181,3 +182,7 @@ def index(request):
 # Поток видео
 def video_feed(request):
     return StreamingHttpResponse(generate_frames(), content_type='multipart/x-mixed-replace; boundary=frame')
+
+@login_required
+def measurements(request):
+    return render(request, 'videodelivery/measurements.html')

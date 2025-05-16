@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'videodelivery',
+    'accounts',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -74,17 +75,25 @@ WSGI_APPLICATION = 'webheadpose.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'django_video_db',
-#         'USER': 'postgres',
-#         'PASSWORD': 'admin',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'django_video_db',
+        'USER': 'postgres',
+        'PASSWORD': 'admin',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
 
+LOGIN_REDIRECT_URL = 'measurements'  # После входа
+LOGOUT_REDIRECT_URL = 'index'       # После выхода
+LOGIN_URL = 'login'                 # Для @login_required
+
+# Настройки сессии
+SESSION_COOKIE_AGE = 1209600  # 2 недели в секундах (по умолчанию)
+SESSION_SAVE_EVERY_REQUEST = True  # Обновлять сессию при каждом запросе
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Сессия не закроется при закрытии браузера
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
