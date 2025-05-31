@@ -93,7 +93,7 @@ def main():
     print(f"Device: {device}\n")
 
     data_dir = 'D:/Studying/Fourth/UBFC-rPPG' 
-    T = 1387 
+    T = 512
     batch_size = 4
     num_epochs = 50 
     number_of_stripes = 4
@@ -116,7 +116,7 @@ def main():
         batch_size=batch_size,
         # sampler=train_sampler,
         num_workers=4,
-        shuffle=True
+        shuffle=False
     )
 
     test_loader = DataLoader(
@@ -129,10 +129,10 @@ def main():
     print("Dataloaders ready!")
 
     model = SRRN(in_channels=3, R=4, T=T).to(device)
-    optimizer = Adam(model.parameters(), lr=3e-3, weight_decay=1e-5)
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
-    # criterion = combined_loss
-    criterion = nn.L1Loss()
+    optimizer = Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    criterion = combined_loss
+    # criterion = nn.L1Loss()
 
     best_val_loss = float('inf')
     for epoch in range(num_epochs):
@@ -157,6 +157,7 @@ def main():
                 multi_band_signals.append(multi_band)
             
             multi_band_signals = torch.from_numpy(np.stack(multi_band_signals)).float().to(device)  # [B, C=3, K=4, T=1387]
+            multi_band_signals = (multi_band_signals - multi_band_signals.mean(dim=-1, keepdim=True)) / (multi_band_signals.std(dim=-1, keepdim=True) + 1e-8)
             # print(multi_band_signals.shape)
 
             optimizer.zero_grad()

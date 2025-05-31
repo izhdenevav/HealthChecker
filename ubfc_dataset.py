@@ -7,16 +7,6 @@ from data_preprocessing import apply_color_space_conversion, apply_time_domain_n
 
 class UBFCrPPGDataset(Dataset):
     def __init__(self, data_dir, split='train', transform=None, fps=30, max_frames=1387):
-        """
-        Инициализация датасета UBFC-rPPG.
-        
-        Args:
-            data_dir (str): Путь к директории с данными UBFC-rPPG.
-            split (str): 'train' или 'test' для выбора подмножества (30 субъектов для train, 12 для test).
-            transform (callable, optional): Дополнительные трансформации для данных.
-            fps (int): Частота кадров видео (по умолчанию 30 fps).
-            max_frames (int): Максимальное количество кадров для обработки (по умолчанию 1387).
-        """
         self.data_dir = data_dir
         self.split = split
         self.transform = transform
@@ -53,19 +43,6 @@ class UBFCrPPGDataset(Dataset):
         return self.num_samples
 
     def __getitem__(self, idx):
-        """
-        Возвращает один образец данных: пространственно-временную карту и ground truth данные.
-        
-        Args:
-            idx (int): Индекс образца.
-        
-        Returns:
-            dict: Словарь с полями:
-                - 'spatial_temporal_map': torch.Tensor размером (C=3, R=4, T) - нормализованная карта.
-                - 'ppg_signal': torch.Tensor - PPG сигнал из ground truth.
-                - 'hr_values': torch.Tensor - Значения HR из ground truth.
-                - 'timesteps': torch.Tensor - Временные метки.
-        """
 
         video_path = self.video_paths[idx]
         cap = cv2.VideoCapture(video_path)

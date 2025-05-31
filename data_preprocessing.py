@@ -72,20 +72,6 @@ def apply_color_space_conversion(frame):
     
     return facial_means_yuv
 
-# def apply_time_domain_normalization(spatial_temporal_map):
-#     normalized_map = {}
-
-#     regions = spatial_temporal_map[0].keys()
-
-#     for region in regions:
-#         values = np.array([frame[region] for frame in spatial_temporal_map])
-#         mean = values.mean(axis=0)
-#         std = values.std(axis=0) + 1e-8
-#         normalized = (values - mean) / std
-#         normalized_map[region] = normalized
-    
-#     return normalized_map
-
 def apply_time_domain_normalization(spatial_temporal_map):
     regions = spatial_temporal_map[0].keys()
     C, R, T = 3, len(regions), len(spatial_temporal_map)
@@ -98,13 +84,6 @@ def apply_time_domain_normalization(spatial_temporal_map):
         normalized[:, r, :] = ((values - mean) / std).T  # [C, T]
     
     return normalized
-
-# def add_white_noise(normalized_spatial_temporal_map, noise_std=0.05):
-#     noisy_series = {}
-#     for key, data in normalized_spatial_temporal_map.items():
-#         noise = np.random.normal(0, noise_std, data.shape)
-#         noisy_series[key] = data + noise
-#     return noisy_series
 
 def add_white_noise(normalized_spatial_temporal_map, noise_std=0.05):
     noise = np.random.normal(0, noise_std, normalized_spatial_temporal_map.shape)
