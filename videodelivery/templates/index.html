@@ -1,0 +1,259 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мониторинг здоровья</title>
+  <!-- Подключение Tailwind CSS через CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+    .measurements-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 50;
+      background-color: #4f46e5;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      transition: all 0.2s ease;
+    }
+    .measurements-btn:hover {
+      background-color: #4338ca;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  
+  <!-- Кнопка "Все измерения" -->
+  <a href="{% url 'login' %}" class="measurements-btn">
+    Все измерения
+  </a>
+
+  <div class="container mx-auto p-6 max-w-5xl">
+    <!-- Заголовок страницы -->
+    <h1 class="text-4xl font-bold text-center text-indigo-600 mb-8">Мониторинг здоровья в реальном времени</h1>
+    <!-- Обработанное видео и данные -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+      <!-- Надпись о положении -->
+      <p id="position" class="text-4xl font-semibold text-center text-gray-500 mb-4">Ожидание данных...</p>
+      <!-- Видео с веб-камеры клиента -->
+      <video id="video" autoplay playsinline class="w-full max-w-2xl mx-auto rounded-md" width="720" height="480" style="transform: scaleX(-1);"></video>
+      <canvas id="canvas" style="display: none;"></canvas>
+      <!-- Пульс и дыхание -->
+      <div class="mt-4 flex justify-center gap-8">
+        <p class="text-lg font-medium text-gray-700">Пульс: <span id="hr" class="text-red-600">0.0</span> уд/мин</p>
+        <p class="text-lg font-medium text-gray-700">Дыхание: <span id="breathing" class="text-blue-600">0.0</span> дых/мин</p>
+      </div>
+    </div>
+
+    <!-- Графики (оба снизу) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <!-- График частоты дыхания -->
+      <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-semibold text-blue-500 mb-4">Дыхание</h2>
+        <canvas id="breathing-chart" class="w-full h-40"></canvas>
+      </div>
+      <!-- График сердцебиения -->
+      <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-semibold text-red-500 mb-4">Пульс</h2>
+        <canvas id="heartbeat-chart" class="w-full h-40"></canvas>
+      </div>
+    </div>
+  </div>
+
+    <script>
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+        })
+        .catch(err => {
+          console.error("Ошибка доступа к камере:", err);
+        });
+
+      function sendFrame() {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const imageData = canvas.toDataURL('image/jpeg');
+
+        fetch("{% url 'process_frame' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+          },
+          body: JSON.stringify({ image: imageData.split(',')[1] })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.hr !== null) {
+              console.log('Обновление графика с hr:', data.hr);
+              document.getElementById('hr').textContent = data.hr.toFixed(1);
+              updateBPMChart(data.hr);
+            } else {
+              document.getElementById('hr').textContent = '—';
+            }
+            if (data.breathing !== null) {
+              document.getElementById('breathing').textContent = data.breathing.toFixed(1);
+            } else {
+              document.getElementById('breathing').textContent = '—';
+            }
+            if (data.cg_filtered && Array.isArray(data.cg_filtered)) {
+              console.log('cg_filtered:', data.cg_filtered);
+              updateBreathingChart(data.cg_filtered);
+            }
+            document.getElementById('position').textContent = data.position;
+        })
+        .catch(err => {
+          console.error("Ошибка отправки кадра:", err);
+        });
+      }
+
+      // Отправляем кадры каждые 500 мс
+      setInterval(sendFrame, 100);
+
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      }
+  </script>
+
+    <script>
+    // Инициализация графика дыхания
+    const breathingData = {
+      labels: [],
+      datasets: [{
+        label: 'Дыхание',
+        data: [],
+        borderColor: 'blue',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.2,
+        fill: false
+      }]
+    };
+
+    const breathingConfig = {
+      type: 'line',
+      data: breathingData,
+      options: {
+        responsive: true,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          title: { display: false },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          x: {
+            display: false,
+            grid: { display: false },
+            ticks: { display: false }
+          },
+          y: {
+            display: false,
+            grid: { display: false },
+            ticks: { display: false }
+          }
+        }
+      }
+    };
+
+    const breathingChart = new Chart(
+      document.getElementById('breathing-chart'),
+      breathingConfig
+    );
+
+    // Обновление графика дыхания на основе cg_filtered
+    function updateBreathingChart(cg_filtered) {
+      const maxPoints = 1200;
+      breathingData.labels = [];
+      breathingData.datasets[0].data = [];
+
+      // Добавляем последние maxPoints значений из cg_filtered
+      cg_filtered.slice(-maxPoints).forEach((value, index) => {
+        const now = new Date().toLocaleTimeString();
+        breathingData.labels.push(now + ` (${index})`);
+        breathingData.datasets[0].data.push(value);
+      });
+
+      breathingChart.update();
+    }
+
+    // Инициализация графика пульса
+    const bpmData = {
+      labels: [],
+      datasets: [{
+        data: [],
+        borderColor: 'red',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.2,
+        fill: false
+      }]
+    };
+
+    const bpmConfig = {
+      type: 'line',
+      data: bpmData,
+      options: {
+        responsive: true,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          title: { display: false },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          x: {
+            display: false,
+            grid: { display: false },
+            ticks: { display: false }
+          },
+          y: {
+            display: false,
+            min: 40,
+            max: 180,
+            grid: { display: false },
+            ticks: { display: false }
+          }
+        }
+      }
+    };
+
+    const bpmChart = new Chart(
+      document.getElementById('heartbeat-chart'),
+      bpmConfig
+    );
+
+    // Обновление графика при каждом новом bpm
+    function updateBPMChart(bpm) {
+      const maxPoints = 50;
+      const now = new Date().toLocaleTimeString();
+
+      bpmData.labels.push(now);
+      bpmData.datasets[0].data.push(bpm);
+
+      if (bpmData.labels.length > maxPoints) {
+        bpmData.labels.shift();
+        bpmData.datasets[0].data.shift();
+      }
+
+      bpmChart.update();
+    }
+  </script>
+</body>
+</html>

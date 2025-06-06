@@ -1,26 +1,8 @@
-# Виртуальные окружения
-.venv/
-.venv1/
-
-# PyCharm
-.idea/
-**/.idea/
-
-# Python
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-
-# MacOS
-.DS_Store
-
-# Swap-файлы
-*.swp
-*.swo
-
-# Логи
-*.log
-
-# Секретные переменные и env-файлы
-.env
+/.venv/
+/.venv1/
+/.idea/
+/__pycache__/
+/webheadpose/webheadpose/__pycache__/
+/webheadpose/.idea/
+/webheadpose/videodelivery/__pycache__/
+/db.sqlite3
