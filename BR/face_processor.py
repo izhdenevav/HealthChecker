@@ -2,31 +2,6 @@ import cv2
 import numpy as np
 import mediapipe as mp
 
-"""class KalmanFilter:
-    def __init__(self, process_noise=1e-6, measurement_noise=1e-3, error_cov=1.0):
-        self.state_size = 4
-        self.measurement_size = 2
-        self.transitionMatrix = np.array([[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
-        self.measurementMatrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0]], np.float32)
-        self.processNoiseCov = np.eye(self.state_size, dtype=np.float32) * process_noise
-        self.measurementNoiseCov = np.eye(self.measurement_size, dtype=np.float32) * measurement_noise
-        self.state = np.zeros((self.state_size, 1), dtype=np.float32)
-        self.error_cov = np.eye(self.state_size, dtype=np.float32) * error_cov
-
-    def update(self, x, y):
-        measurement = np.array([[x], [y]], np.float32)
-        predicted_state = np.dot(self.transitionMatrix, self.state)
-        predicted_error_cov = np.dot(np.dot(self.transitionMatrix, self.error_cov), 
-                                   self.transitionMatrix.T) + self.processNoiseCov
-        S = np.dot(np.dot(self.measurementMatrix, predicted_error_cov), 
-                  self.measurementMatrix.T) + self.measurementNoiseCov
-        K = np.dot(np.dot(predicted_error_cov, self.measurementMatrix.T), np.linalg.inv(S))
-        innovation = measurement - np.dot(self.measurementMatrix, predicted_state)
-        self.state = predicted_state + np.dot(K, innovation)
-        self.error_cov = predicted_error_cov - np.dot(np.dot(K, self.measurementMatrix), predicted_error_cov)
-        predicted = np.dot(self.transitionMatrix, self.state)
-        return predicted[0, 0], predicted[1, 0]
-"""
 class FaceProcessor:
     def __init__(self):
         self.mp_face_mesh = mp.solutions.face_mesh

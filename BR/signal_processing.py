@@ -1,10 +1,10 @@
 import numpy as np
 import torch
 import cv2
-from breathing_rate_calculator import BreathingRateCalculator
+from . import breathing_rate_calculator
 
 class SignalProcessor:
-    def __init__(self, fps=30, resp_band=(0.05, 0.43), max_frames=10000):
+    def __init__(self, fps=30, resp_band=(0.13, 0.3), max_frames=30000000):
         self.fps = fps
         self.resp_min, self.resp_max = resp_band
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -12,7 +12,8 @@ class SignalProcessor:
         self.cg_raw = np.zeros(max_frames, dtype=np.float32)
         self.cg_filtered = np.zeros(max_frames, dtype=np.float32)
         self.data_index = 0
-        self.br_calculator = BreathingRateCalculator(fps=fps)
+        self.br_calculator = breathing_rate_calculator.BreathingRateCalculator(fps=fps)
+        #self.br_calculator = BreathingRateCalculator(fps=fps)
 
     def _rgb_to_ycgco(self, frame, roi):
         try:
@@ -52,10 +53,10 @@ class SignalProcessor:
             
         mean_cg = np.mean(valid_values)
         if self.data_index < len(self.cg_raw):
-            self.cg_raw[self.data_index] = mean_cg*(-1)
+            self.cg_raw[self.data_index] = mean_cg
             self.data_index += 1
         
-        start_idx = max(0, self.data_index - self.fps * 60)
+        start_idx = max(0, self.data_index - self.fps * 15)
         signal_to_filter = self.cg_raw[start_idx:self.data_index]
         filtered_signal = self._apply_fft_filter(signal_to_filter)
         self.cg_filtered[start_idx:self.data_index] = filtered_signal
