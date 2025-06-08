@@ -19,41 +19,41 @@ python main.py
 Profit!
 
 
-## How it works
+## How it works (далее на русском)
 
-### General Overview
+### Общий обзор
 
-The program operates through the following steps:
+Программа работает следующим образом:
 
-1. Captures video frames and checks head position.
-2. Identifies regions of interest (ROIs) on the face using facial landmark processing.
-3. Extracts a breathing-related signal from the ROIs and processes it.
-4. Calculates the breathing rate based on the processed signal.
-5. Displays results and plots graphs in real-time.
+1. Захватывает видеокадры и проверяет положение головы.
+2. Определяет регионы интереса (ROIs) на лице с помощью обработки лицевых ориентиров.
+3. Извлекает сигнал, связанный с дыханием, из ROIs и обрабатывает его.
+4. Рассчитывает частоту дыхания на основе обработанного сигнала.
+5. Отображает результаты и строит графики в реальном времени.
 
-### Detailed Description
+### Подробное описание
 
-#### 1. Video Capture and Head Position Check
+#### 1. Захват видео и проверка положения головы
 
-- In `main.py`, video frames are captured using OpenCV (`cv2.VideoCapture`).
-- The `check_position` function (presumably from `angle_fun.py`) verifies if the head is correctly positioned (based on yaw, pitch, and roll angles).
-- If the head position is incorrect, the frame is skipped to avoid inaccurate measurements.
+- В файле `main.py` видео захватывается покадрово с помощью OpenCV (`cv2.VideoCapture`).
+- Функция `check_position` (предположительно из `angle_fun.py`) проверяет, правильно ли расположена голова (по углам поворота: yaw, pitch, roll).
+- Если положение головы неверное, кадр пропускается, чтобы избежать некорректных измерений.
 
-#### 2. Face Processing
+#### 2. Обработка лица
 
-- The `FaceProcessor` class in `face_processor.py` uses MediaPipe Face Mesh to detect facial landmarks.
-- Regions of interest (ROIs) are defined on the left and right cheeks using predefined landmark indices (101 for the left cheek, 330 for the right cheek).
-- The size of ROIs is calculated proportionally to the inter-eye distance to adapt to face size.
+- Класс `FaceProcessor` в файле `face_processor.py` использует MediaPipe Face Mesh для обнаружения лицевых ориентиров.
+- Регионы интереса (ROIs) определяются на левой и правой щеках с использованием заранее заданных индексов ориентиров (101 для левой щеки, 330 для правой).
+- Размер ROIs рассчитывается пропорционально расстоянию между глазами, чтобы адаптироваться к размеру лица.
 
-#### 3. Signal Processing
+#### 3. Обработка сигнала
 
-- The `SignalProcessor` class in `signal_processing.py` handles the extraction and processing of the breathing signal:
-  - **Signal Extraction**: ROIs are converted from RGB to the YCgCo color space, and the Cg (Chrominance Green) component is extracted, which is sensitive to skin color changes due to blood flow.
-  - **Cg Formula**: `Cg = 128 + (-0.25 * R + 0.5 * G - 0.25 * B) * 255`.
-  - **Raw Signal**: The mean Cg value for all ROIs is inverted and stored in the `cg_raw` array.
-  - **Filtering**: A Fast Fourier Transform (FFT) is applied to filter the signal within the breathing frequency range (0.05–0.43 Hz, corresponding to 3–26 breaths per minute). The filtered signal is stored in `cg_filtered`.
+- Класс `SignalProcessor` в файле `signal_processing.py` отвечает за извлечение и обработку сигнала дыхания:
+  - **Извлечение сигнала**: ROIs преобразуются из RGB в цветовое пространство YCgCo, и извлекается компонент Cg (Chrominance Green), который чувствителен к изменениям цвета кожи из-за кровотока.
+  - **Формула Cg**: `Cg = 128 + (-0.25 * R + 0.5 * G - 0.25 * B) * 255`.
+  - **Сырой сигнал**: Среднее значение Cg для всех ROIs инвертируется и сохраняется в массиве `cg_raw`.
+  - **Фильтрация**: Применяется быстрое преобразование Фурье (FFT) для фильтрации сигнала в диапазоне частот дыхания (0.05–0.43 Гц, что соответствует 3–26 вдохам в минуту). Отфильтрованный сигнал сохраняется в `cg_filtered`.
 
-**Convertation from RGB to YCgCo:**
+**Перевод в YCgCo:**
 ```python
 def _rgb_to_ycgco(self, frame, roi):
     x, y, w, h = roi
@@ -63,7 +63,7 @@ def _rgb_to_ycgco(self, frame, roi):
     return np.mean(cg)
 ```
 
-**Signal Filtering:**
+**Фильтрация сигнала:**
 ```python
 def _apply_fft_filter(self, signal):
     signal_tensor = torch.tensor(signal, dtype=torch.float32).to(self.device)
@@ -75,13 +75,13 @@ def _apply_fft_filter(self, signal):
     return filtered_signal.cpu().numpy()
 ```
 
-#### 4. Breathing Rate Calculation
+#### 4. Расчет частоты дыхания
 
-- The `BreathingRateCalculator` class in `breathing_rate_calculator.py` accumulates filtered signal values.
-- Every 10 seconds, the signal is analyzed to detect peaks (using `scipy.signal.find_peaks`), which correspond to breaths.
-- The breathing rate is calculated as the number of peaks per minute.
+- Класс `BreathingRateCalculator` в файле `breathing_rate_calculator.py` накапливает значения отфильтрованного сигнала.
+- Каждые 10 секунд сигнал анализируется для поиска пиков (с помощью `scipy.signal.find_peaks`), которые соответствуют вдохам.
+- Частота дыхания рассчитывается как количество пиков в минуту.
 
-**Calculating of br:**
+**Рассчет частоты дыхания:**
 ```python
 def calculate_br(self):
     signal = np.array(self.signal_buffer)
@@ -93,27 +93,28 @@ def calculate_br(self):
     return br
 ```
 
-#### 5. Display and Graph Plotting
+#### 5. Отображение и построение графиков
 
-- Frames display ROIs, analysis status, and, if calculated, the breathing rate.
-- Graphs of the raw (`cg_raw`) and filtered (`cg_filtered`) signals are plotted in real-time using Matplotlib and displayed via OpenCV.
+- На кадрах отображаются ROIs, статус анализа и, если рассчитана, частота дыхания.
+- Графики сырого (`cg_raw`) и отфильтрованного (`cg_filtered`) сигналов строятся в реальном времени с помощью Matplotlib и отображаются через OpenCV.
 
-**Graph Plotting Mechanism in `main.py`:**
-- After the first 300 frames and every 30 frames, data from `cg_raw` and `cg_filtered` is retrieved using the `get_all_data` method.
-- These arrays update the graph lines (`line_raw` and `line_filtered`), which are then rendered and displayed.
+**Механизм построения графиков в `main.py`:**
+- После первых 300 кадров и каждые 30 кадров данные из `cg_raw` и `cg_filtered` извлекаются с помощью метода `get_all_data`.
+- Эти массивы обновляют линии графиков (`line_raw` и `line_filtered`), которые затем отрисовываются и отображаются.
 
-### Signal Processing and Graph Plotting Details
+### Подробности обработки сигналов и построения графиков
 
-- **Data Source for Graphs**:
-  - **`cg_raw`**: An array containing inverted mean Cg values for each frame, calculated from ROIs.
-  - **`cg_filtered`**: An array with the filtered signal, obtained after applying FFT to `cg_raw`.
+- **Источник данных для графиков**:
+  - **`cg_raw`**: Массив, содержащий средние значения Cg для каждого кадра, рассчитанные из ROIs.
+  - **`cg_filtered`**: Массив с отфильтрованным сигналом, полученным после применения FFT к `cg_raw`.
 
-- **Data Calculation**:
-  - The raw signal (`cg_raw`) is formed by extracting Cg from ROIs and averaging the values for each frame.
-  - The filtered signal (`cg_filtered`) is obtained by applying an FFT filter to the last segment of `cg_raw` (over the past 60 seconds), retaining only breathing frequencies.
+- **Расчет данных**:
+  - Сырой сигнал (`cg_raw`) формируется путем извлечения Cg из ROIs и усреднения значений для каждого кадра.
+  - Отфильтрованный сигнал (`cg_filtered`) получается путем применения FFT-фильтра к последнему сегменту `cg_raw` (за последние 60 секунд), сохраняя только частоты дыхания.
 
-- **Graph Plotting**:
-  - Graphs are updated every 30 frames after the initial 300 frames.
-  - Matplotlib renders the data, and the image is converted to an OpenCV format for display.
+- **Построение графиков**:
+  - Графики обновляются каждые 30 кадров после начальных 300 кадров.
+  - Matplotlib отрисовывает данные, а затем изображение преобразуется в формат OpenCV для отображения.
+
 
 
