@@ -9,6 +9,8 @@ def apply_dct(signal, axis=-1, norm='ortho'):
     dct_result = dct(signal_np, axis=axis, norm=norm)
     return torch.tensor(dct_result, device=signal.device)
 
+
+
 class SSAModule(nn.Module):
     # m - размерность после DCT
     def __init__(self, in_channels, m=64):
