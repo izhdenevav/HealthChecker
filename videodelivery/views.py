@@ -17,6 +17,12 @@ from django.views.decorators.csrf import csrf_exempt
 from . import data_preprocessing, decompose_module, facepoints, face_processor, srrn, signal_processing
 from .models import Measurement
 
+from . import facepoints
+from . import data_preprocessing
+from . import decompose_module
+from . import srrn
+from . import face_processor
+from . import signal_processing
 
 global_processor = None
 
@@ -34,7 +40,7 @@ class FrameProcessor:
 
         self.model = srrn.SRRN(in_channels=3, R=4, T=self.frames_per_calculation)
         self.model.load_state_dict(torch.load('./srrn_best.pth', map_location=torch.device('cpu')))
-        # self.model.eval()  # При желании можно раскомментировать
+        # self.model.eval()
 
         self.bpm = 0.0
         self.face_processor = face_processor.FaceProcessor()
@@ -44,8 +50,8 @@ class FrameProcessor:
         self.cg_filtered = np.zeros(30000000, dtype=np.float32)
 
         self.model_points = np.array([
-            (0.0, 0.0, 0.0),        # Кончик носа
-            (0.0, -330.0, -65.0),   # Подбородок
+            (0.0, 0.0, 0.0),  # Кончик носа
+            (0.0, -330.0, -65.0),  # Подбородок
             (-225.0, 170.0, -135.0),
             (225.0, 170.0, -135.0),
             (-150.0, -150.0, -125.0),
@@ -65,24 +71,25 @@ class FrameProcessor:
         my_points = facepoints.get_face_tracking_landmarks(raw_points) if raw_points else []
 
         if len(my_points) != 6:
-            return "Недостаточно точек (меньше 6)", self.bpm, self.br_value, self.cg_filtered
+            return "Недостаточно точек (меньше 6)", self.bpm, self.br_value
 
         for j, pt in enumerate(my_points):
             self.landmark_buffers[j].append(pt)
 
         if not all(len(buf) > 0 for buf in self.landmark_buffers):
-            return "Ожидание данных", self.bpm, self.br_value, self.cg_filtered
+            return "Ожидание данных", self.bpm, self.br_value
 
-        image_points = np.array([np.mean(self.landmark_buffers[j], axis=0) for j in range(6)], dtype=np.float64)
+        image_points = np.array([
+            np.mean(self.landmark_buffers[j], axis=0) for j in range(6)
+        ], dtype=np.float64)
 
         try:
-            success, rvec, _ = cv2.solvePnP(
-                self.model_points, image_points, self.camera_matrix, None, flags=cv2.SOLVEPNP_SQPNP
-            )
+            success, rvec, _ = cv2.solvePnP(self.model_points, image_points, self.camera_matrix, None,
+                                            flags=cv2.SOLVEPNP_SQPNP)
             if not success:
-                return "Ошибка PnP", self.bpm, self.br_value, self.cg_filtered
+                return "Ошибка PnP", self.bpm, self.br_value
         except Exception:
-            return "Ошибка solvePnP", self.bpm, self.br_value, self.cg_filtered
+            return "Ошибка solvePnP", self.bpm, self.br_value
 
         rmat, _ = cv2.Rodrigues(rvec)
         angles, *_ = cv2.RQDecomp3x3(rmat)
@@ -145,10 +152,10 @@ def index(request):
 @csrf_exempt
 def process_frame(request):
     global global_processor
-    try:
-        if request.method != 'POST':
-            return JsonResponse({'error': 'Invalid method'}, status=405)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=405)
 
+    try:
         if global_processor is None:
             global_processor = FrameProcessor()
 
@@ -167,8 +174,6 @@ def process_frame(request):
         })
 
     except Exception as e:
-        print("Ошибка в process_frame:", e)
-        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 
