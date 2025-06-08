@@ -11,6 +11,14 @@ The principle of the program is based on changing the shades of certain parts of
 - Throughout the program, look clearly into the camera, do not make sudden movements of the head    
 - Make sure that the camera is connected correctly and shoots at least 30 frames per second (yes, in 99% of cases the second condition is met for modern cameras, but if you doubt - it is better to check)
 
+### Launch of the program
+To run the program, run the main.py file:
+```bash
+python main.py
+```
+Profit!
+
+
 ## How it works
 
 ### General Overview
