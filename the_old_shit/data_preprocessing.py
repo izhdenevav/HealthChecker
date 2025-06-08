@@ -1,6 +1,6 @@
 import numpy as np
 
-import facepoints
+from . import facepoints
 
 def extract_face_regions(frame):
     regions = {}
@@ -74,7 +74,8 @@ def apply_color_space_conversion(frame):
 
 def apply_time_domain_normalization(spatial_temporal_map):
     regions = spatial_temporal_map[0].keys()
-    C, R, T = 3, len(regions), len(spatial_temporal_map)
+    # у нас массив 300 кадров, каждый кадр массив 4 зоны, каждая зона массив из 3 чисел - значений y u v; c = 3 (y, u, v), r = 4 (зоны), t = 300 (кадров, потому что 10 секунд хотим)
+    C, R, T = 3, len(regions), len(spatial_temporal_map) 
     normalized = np.zeros((C, R, T))
     
     for r, region in enumerate(regions):
