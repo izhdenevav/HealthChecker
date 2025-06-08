@@ -17,12 +17,6 @@ from django.views.decorators.csrf import csrf_exempt
 from . import data_preprocessing, decompose_module, facepoints, face_processor, srrn, signal_processing
 from .models import Measurement
 
-from . import facepoints
-from . import data_preprocessing
-from . import decompose_module
-from . import srrn
-from . import face_processor
-from . import signal_processing
 
 global_processor = None
 
@@ -37,6 +31,7 @@ class FrameProcessor:
         self.frames_per_calculation = 300
         self.frames_cnt = 0
         self.spatial_temporal_map = []
+        self.measurements_buffer = []  # Буфер для измерений до авторизации
 
         self.model = srrn.SRRN(in_channels=3, R=4, T=self.frames_per_calculation)
         self.model.load_state_dict(torch.load('./srrn_best.pth', map_location=torch.device('cpu')))
@@ -140,6 +135,14 @@ class FrameProcessor:
                     self.br_value = self.br
                     _, self.cg_filtered = self.signal_processor.get_all_data()
 
+            # Добавляем измерение в буфер (для гостя)
+            self.measurements_buffer.append({
+                'timestamp': timezone.now(),
+                'pulse': self.bpm,
+                'breathing': self.br_value,
+                'head_position': position,
+            })
+
         return position, self.bpm, self.br_value, self.cg_filtered
 
 
@@ -179,6 +182,19 @@ def process_frame(request):
 
 @login_required
 def measurements(request):
+    global global_processor
+
+    # Если есть буфер измерений гостя, сохраняем их в БД под пользователем
+    if global_processor and global_processor.measurements_buffer:
+        for item in global_processor.measurements_buffer:
+            Measurement.objects.create(
+                user=request.user,
+                pulse=item['pulse'],
+                breathing=item['breathing'],
+                created_at=item['timestamp']
+            )
+        global_processor.measurements_buffer.clear()
+
     if request.method == 'POST':
         time_str = request.POST.get('time')
         pulse = request.POST.get('hr')
@@ -194,7 +210,6 @@ def measurements(request):
                 user=request.user,
                 pulse=float(pulse),
                 breathing=float(breathing),
-                head_position="Ручной ввод",
                 created_at=created_at
             )
             return redirect('measurements')

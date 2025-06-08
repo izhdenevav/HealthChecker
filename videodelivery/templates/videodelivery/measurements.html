@@ -69,9 +69,13 @@
                             <td class="br-value">{{ measurement.breathing }} <small>дых/мин</small></td>
                             <td>
                                 {% if measurement.pulse > 100 or measurement.pulse < 60 %}
-                                    <span class="badge bg-danger">HR вне нормы</span>
+                                    {% if measurement.breathing > 20 or measurement.breathing < 12 %}
+                                        <span class="badge bg-danger">HR и BR вне нормы</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">HR вне нормы</span>
+                                    {% endif %}
                                 {% elif measurement.breathing > 20 or measurement.breathing < 12 %}
-                                    <span class="badge bg-warning text-dark">BR вне нормы</span>
+                                    <span class="badge bg-danger">BR вне нормы</span>
                                 {% else %}
                                     <span class="badge bg-success">Норма</span>
                                 {% endif %}
