@@ -63,31 +63,7 @@ def logout_view(request):
 
 @login_required
 def measurements_view(request):
-    if request.method == 'POST':
-        # Получаем данные из формы
-        time_str = request.POST.get('time')
-        hr = request.POST.get('hr')
-        br = request.POST.get('br')
-
-        # Создаем объект datetime из текущей даты и введенного времени
-        today = timezone.now().date()
-        measurement_time = datetime.strptime(time_str, '%H:%M').time()
-        measurement_datetime = timezone.make_aware(
-            datetime.combine(today, measurement_time)
-        )
-
-        # Сохраняем измерение
-        HealthMeasurement.objects.create(
-            user=request.user,
-            date=measurement_datetime,
-            hr=hr,
-            br=br
-        )
-        return redirect('measurements')
-
-    # Получаем измерения текущего пользователя
     measurements = HealthMeasurement.objects.filter(user=request.user).order_by('-date')
-
-    return render(request, 'measurements.html', {
+    return render(request, 'videodelivery/measurements.html', {
         'measurements': measurements
     })

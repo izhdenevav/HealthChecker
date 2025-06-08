@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import dj_database_url
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,11 +26,19 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 SECRET_KEY = 'django-insecure-rjbqufb!*0xmz^k6xtezc*mg(u#j3o)--zii#@mi4#@*)id(1t'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1"]
-# ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = ["127.0.0.1"]
+ALLOWED_HOSTS = [
+    'izhdenevav-ml-project-54c6.twc1.net',
+    '92.255.109.7',
+    '127.0.0.1',
+    'localhost',
+]
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://izhdenevav-ml-project-54c6.twc1.net',
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -77,15 +87,21 @@ WSGI_APPLICATION = 'webheadpose.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'django_video_db',
-        'USER': 'postgres',
-        'PASSWORD': 'admin',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'postgresql://gen_user:пароль@null:5432/default_db')
+    )
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'django_video_db',
+#         'USER': 'postgres',
+#         'PASSWORD': 'admin',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
 
 # DATABASES = {
 #     'default': {

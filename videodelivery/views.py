@@ -1,23 +1,25 @@
 import base64
 import json
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
+import traceback
 from collections import deque
+
+import cv2
 import numpy as np
 import torch
-import cv2
 from scipy.signal import find_peaks
 
-from . import facepoints
-from . import data_preprocessing
-from . import decompose_module
-from . import srrn
-from . import face_processor
-from . import signal_processing
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.shortcuts import redirect, render
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+
+from . import data_preprocessing, decompose_module, facepoints, face_processor, srrn, signal_processing
+from .models import Measurement
+
 
 global_processor = None
+
 
 class FrameProcessor:
     def __init__(self):
@@ -28,11 +30,11 @@ class FrameProcessor:
         self.roll_buffer = deque(maxlen=self.N)
         self.frames_per_calculation = 300
         self.frames_cnt = 0
-        self.spatial_temporal_map = []  
+        self.spatial_temporal_map = []
 
         self.model = srrn.SRRN(in_channels=3, R=4, T=self.frames_per_calculation)
         self.model.load_state_dict(torch.load('./srrn_best.pth', map_location=torch.device('cpu')))
-        # self.model.eval()
+        # self.model.eval()  # При желании можно раскомментировать
 
         self.bpm = 0.0
         self.face_processor = face_processor.FaceProcessor()
@@ -63,31 +65,33 @@ class FrameProcessor:
         my_points = facepoints.get_face_tracking_landmarks(raw_points) if raw_points else []
 
         if len(my_points) != 6:
-            return "Недостаточно точек (меньше 6)", self.bpm, self.br_value
+            return "Недостаточно точек (меньше 6)", self.bpm, self.br_value, self.cg_filtered
 
         for j, pt in enumerate(my_points):
             self.landmark_buffers[j].append(pt)
 
         if not all(len(buf) > 0 for buf in self.landmark_buffers):
-            return "Ожидание данных", self.bpm, self.br_value
+            return "Ожидание данных", self.bpm, self.br_value, self.cg_filtered
 
-        image_points = np.array([
-            np.mean(self.landmark_buffers[j], axis=0) for j in range(6)
-        ], dtype=np.float64)
+        image_points = np.array([np.mean(self.landmark_buffers[j], axis=0) for j in range(6)], dtype=np.float64)
 
         try:
-            success, rvec, _ = cv2.solvePnP(self.model_points, image_points, self.camera_matrix, None, flags=cv2.SOLVEPNP_SQPNP)
+            success, rvec, _ = cv2.solvePnP(
+                self.model_points, image_points, self.camera_matrix, None, flags=cv2.SOLVEPNP_SQPNP
+            )
             if not success:
-                return "Ошибка PnP", self.bpm, self.br_value
+                return "Ошибка PnP", self.bpm, self.br_value, self.cg_filtered
         except Exception:
-            return "Ошибка solvePnP", self.bpm, self.br_value
+            return "Ошибка solvePnP", self.bpm, self.br_value, self.cg_filtered
 
         rmat, _ = cv2.Rodrigues(rvec)
         angles, *_ = cv2.RQDecomp3x3(rmat)
         yaw, pitch, roll = angles[1], angles[0], angles[2]
 
-        if pitch > 90: pitch = 180 - pitch
-        elif pitch < -90: pitch = -(180 + pitch)
+        if pitch > 90:
+            pitch = 180 - pitch
+        elif pitch < -90:
+            pitch = -(180 + pitch)
 
         self.yaw_buffer.append(yaw)
         self.pitch_buffer.append(pitch)
@@ -131,39 +135,30 @@ class FrameProcessor:
 
         return position, self.bpm, self.br_value, self.cg_filtered
 
+
 # === VIEWS ===
 
 def index(request):
     return render(request, 'index.html')
 
+
 @csrf_exempt
 def process_frame(request):
     global global_processor
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Invalid method'}, status=405)
-    
     try:
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Invalid method'}, status=405)
+
         if global_processor is None:
             global_processor = FrameProcessor()
 
         data = json.loads(request.body)
-
-        if 'image' not in data:
-            return JsonResponse({'error': 'No image field in request'}, status=400)
-
-        try:
-            img_data = base64.b64decode(data['image'])
-        except Exception as e:
-            return JsonResponse({'error': f'Base64 decode failed: {str(e)}'}, status=400)
+        img_data = base64.b64decode(data['image'])
 
         nparr = np.frombuffer(img_data, np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-        if frame is None:
-            return JsonResponse({'error': 'Failed to decode image'}, status=400)
-
         position, hr, breathing, cg_filtered = global_processor.process(frame)
-
         return JsonResponse({
             'position': position,
             'hr': hr,
@@ -172,10 +167,38 @@ def process_frame(request):
         })
 
     except Exception as e:
-        import traceback
+        print("Ошибка в process_frame:", e)
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
+
 @login_required
 def measurements(request):
-    return render(request, 'videodelivery/measurements.html')
+    if request.method == 'POST':
+        time_str = request.POST.get('time')
+        pulse = request.POST.get('hr')
+        breathing = request.POST.get('br')
+
+        if time_str and pulse and breathing:
+            today = timezone.localdate()
+            dt_str = f"{today} {time_str}"
+            created_at = timezone.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+            created_at = timezone.make_aware(created_at, timezone.get_current_timezone())
+
+            Measurement.objects.create(
+                user=request.user,
+                pulse=float(pulse),
+                breathing=float(breathing),
+                head_position="Ручной ввод",
+                created_at=created_at
+            )
+            return redirect('measurements')
+
+        return redirect('measurements')
+
+    user_measurements = Measurement.objects.filter(user=request.user).order_by('-created_at')
+
+    return render(request, 'videodelivery/measurements.html', {
+        'measurements': user_measurements,
+        'user': request.user,
+    })
