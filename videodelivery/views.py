@@ -160,24 +160,31 @@ class FrameProcessor:
 def index(request):
     return render(request, 'index.html')
 
+session_processors = {}
 
 @csrf_exempt
 def process_frame(request):
-    global global_processor
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid method'}, status=405)
 
     try:
-        if global_processor is None:
-            global_processor = FrameProcessor()
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.save()  # Создаёт сессию, если ещё нет
+            session_key = request.session.session_key
+
+        if session_key not in session_processors:
+            session_processors[session_key] = FrameProcessor()
+
+        processor = session_processors[session_key]
 
         data = json.loads(request.body)
         img_data = base64.b64decode(data['image'])
-
         nparr = np.frombuffer(img_data, np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-        position, hr, breathing, cg_filtered = global_processor.process(frame)
+        position, hr, breathing, cg_filtered = processor.process(frame)
+
         return JsonResponse({
             'position': position,
             'hr': hr,
@@ -186,23 +193,23 @@ def process_frame(request):
         })
 
     except Exception as e:
+        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
-
 
 @login_required
 def measurements(request):
-    global global_processor
+    session_key = request.session.session_key
+    processor = session_processors.get(session_key)
 
-    # Если есть буфер измерений гостя, сохраняем их в БД под пользователем
-    if global_processor and global_processor.measurements_buffer:
-        for item in global_processor.measurements_buffer:
+    if processor and processor.measurements_buffer:
+        for item in processor.measurements_buffer:
             Measurement.objects.create(
                 user=request.user,
                 pulse=item['pulse'],
                 breathing=item['breathing'],
                 created_at=item['timestamp']
             )
-        global_processor.measurements_buffer.clear()
+        processor.measurements_buffer.clear()
 
     if request.method == 'POST':
         time_str = request.POST.get('time')
@@ -225,6 +232,7 @@ def measurements(request):
 
         return redirect('measurements')
 
+    # ⬇️ Этот блок нужен в любом случае (при GET запросе точно)
     user_measurements = Measurement.objects.filter(user=request.user).order_by('-created_at')
 
     return render(request, 'videodelivery/measurements.html', {
