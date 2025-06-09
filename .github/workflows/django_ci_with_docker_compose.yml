@@ -25,15 +25,15 @@ jobs:
 
       - name: Build and start services
         run: |
-          docker-compose up -d --build
-          docker-compose exec db bash -c "until pg_isready ; do sleep 1; done"
+          docker compose up -d --build
+          docker compose exec db bash -c "until pg_isready ; do sleep 1; done"
 
       - name: Run migrations inside web container
-        run: docker-compose exec web python manage.py migrate
+        run: docker compose exec web python manage.py migrate
 
       - name: Run tests inside web container
-        run: docker-compose exec web python manage.py test
+        run: docker compose exec web python manage.py test
 
       - name: Shutdown services
         if: always()
-        run: docker-compose down
+        run: docker compose down
