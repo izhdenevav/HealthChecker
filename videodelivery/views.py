@@ -35,7 +35,7 @@ class FrameProcessor:
 
         self.model = srrn.SRRN(in_channels=3, R=4, T=self.frames_per_calculation)
         self.model.load_state_dict(torch.load('./srrn_best.pth', map_location=torch.device('cpu')))
-        # self.model.eval()
+        self.model.eval()
 
         self.bpm = 0.0
         self.face_processor = face_processor.FaceProcessor()
@@ -105,6 +105,7 @@ class FrameProcessor:
         position = "Правильно!" if is_correct else "Измените положение!"
 
         if is_correct:
+            print("its correct")
             if self.frames_cnt < self.frames_per_calculation:
                 print(self.frames_cnt)
                 csc = data_preprocessing.apply_color_space_conversion(frame)
