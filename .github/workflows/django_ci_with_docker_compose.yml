@@ -17,14 +17,17 @@ jobs:
           - 2375:2375
 
     steps:
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          docker system prune -af
+          df -h
+
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Docker Compose
         uses: docker/setup-buildx-action@v2
-
-      - name: Cleanup Docker cache
-        run: docker system prune -af
 
       - name: Build and start services
         run: |
