@@ -32,6 +32,7 @@ class FrameProcessor:
         self.frames_cnt = 0
         self.spatial_temporal_map = []
         self.measurements_buffer = []  # Буфер для измерений до авторизации
+        self.last_measurement = None
 
         self.model = srrn.SRRN(in_channels=3, R=4, T=self.frames_per_calculation)
         self.model.load_state_dict(torch.load('./srrn_best.pth', map_location=torch.device('cpu')))
@@ -137,13 +138,20 @@ class FrameProcessor:
                     _, self.cg_filtered = self.signal_processor.get_all_data()
 
             # Добавляем измерение в буфер (для гостя)
-            self.measurements_buffer.append({
+            # Добавляем в буфер, только если данные отличаются от последних
+            new_measurement = {
                 'timestamp': timezone.now(),
-                'pulse': self.bpm,
-                'breathing': self.br_value,
+                'pulse': round(self.bpm, 1),
+                'breathing': round(self.br_value, 1),
                 'head_position': position,
-            })
+            }
 
+            if self.last_measurement is None or (
+                abs(new_measurement['pulse'] - self.last_measurement['pulse']) > 0.1 or
+                abs(new_measurement['breathing'] - self.last_measurement['breathing']) > 0.1
+            ):
+                self.measurements_buffer.append(new_measurement)
+                self.last_measurement = new_measurement
         return position, self.bpm, self.br_value, self.cg_filtered
 
 
