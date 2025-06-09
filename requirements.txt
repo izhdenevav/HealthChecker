@@ -14,3 +14,5 @@ torchvision==0.21.0
 django==5.1.7
 psycopg2==2.9.10
 gunicorn==23.0.0
+tzdata
+dj_database_url
