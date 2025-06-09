@@ -88,7 +88,7 @@ WSGI_APPLICATION = 'webheadpose.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL', 'postgresql://gen_user:пароль@null:5432/default_db')
+        default=os.getenv('DATABASE_URL')
     )
 }
 
