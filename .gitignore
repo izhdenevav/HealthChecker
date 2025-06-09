@@ -7,3 +7,17 @@
 /webheadpose/videodelivery/__pycache__/
 /db.sqlite3
 .env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+*.sqlite3
+*.log
+.git/
+.gitignore
+.dockerignore
+*.md
+media/
+static/
