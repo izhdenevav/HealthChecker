@@ -1,0 +1,39 @@
+name: Django CI with Docker Compose
+
+on:
+  push:
+    branches: [ docker ]
+  pull_request:
+    branches: [ docker ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:24.0.2
+        options: --privileged
+        ports:
+          - 2375:2375
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Compose
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and start services
+        run: |
+          docker-compose up -d --build
+          docker-compose exec db bash -c "until pg_isready ; do sleep 1; done"
+
+      - name: Run migrations inside web container
+        run: docker-compose exec web python manage.py migrate
+
+      - name: Run tests inside web container
+        run: docker-compose exec web python manage.py test
+
+      - name: Shutdown services
+        if: always()
+        run: docker-compose down
