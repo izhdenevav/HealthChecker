@@ -2,7 +2,9 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 
+# Форма регистрации пользователя с использованием email вместо username
 class EmailUserCreationForm(UserCreationForm):
+    # Поле ввода email
     email = forms.EmailField(
         label="Email",
         widget=forms.EmailInput(attrs={
@@ -11,6 +13,7 @@ class EmailUserCreationForm(UserCreationForm):
             'id': 'email'
         })
     )
+    # Поле для ввода пароля
     password1 = forms.CharField(
         label="Пароль",
         widget=forms.PasswordInput(attrs={
@@ -19,6 +22,7 @@ class EmailUserCreationForm(UserCreationForm):
             'id': 'password1'
         })
     )
+    # Подтверждение пароля
     password2 = forms.CharField(
         label="Подтверждение пароля",
         widget=forms.PasswordInput(attrs={
@@ -40,6 +44,7 @@ class EmailUserCreationForm(UserCreationForm):
             user.save()
         return user
 
+# Форма авторизации по email и паролю
 class EmailAuthForm(AuthenticationForm):
     username = forms.EmailField(
         label="Email",
