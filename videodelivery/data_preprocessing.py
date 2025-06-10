@@ -2,6 +2,7 @@ import numpy as np
 
 from . import facepoints
 
+# выделяем ключевые точки 4 лицевых зон на карте (щеки, межбровка, переносица), возвращаем словарем
 def extract_face_regions(frame):
     regions = {}
 
@@ -14,7 +15,7 @@ def extract_face_regions(frame):
 
     return regions
 
-
+# считаем средние значения пикселей каждой зоны лица
 def get_facial_regions_means(frame, regions):
     if not regions:
         return None
@@ -35,8 +36,7 @@ def get_facial_regions_means(frame, regions):
 
     return means
 
-
-# перевод в другое цветовое пространство
+# переводим средние значения пикселей из RGB в YUV по схеме, предложенной в статье
 def rgb_to_yuv(means_rgb):
     means_yuv = {}
     for region, rgb in means_rgb.items():
@@ -48,7 +48,6 @@ def rgb_to_yuv(means_rgb):
 
     return means_yuv
 
-
 def apply_color_space_conversion(frame):
     # получаем координаты лицевых зон
     regions = extract_face_regions(frame)
@@ -59,7 +58,7 @@ def apply_color_space_conversion(frame):
 
     return facial_means_yuv
 
-
+# нормализуем полученную пространственно-временную (зоны/кадры) карту по кадрам
 def apply_time_domain_normalization(spatial_temporal_map):
     normalized_map = {}
 
@@ -74,7 +73,7 @@ def apply_time_domain_normalization(spatial_temporal_map):
 
     return normalized_map
 
-
+# добавляем белый шум к карте
 def add_white_noise(normalized_spatial_temporal_map, noise_std=0.1):
     noisy_series = {}
     for key, data in normalized_spatial_temporal_map.items():
