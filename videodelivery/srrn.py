@@ -6,12 +6,14 @@ from . import ssa_module
 from . import tmsc_module
 
 class SRRN(nn.Module):
+    # R - количество регионов (=4), T - количество кадров (по умолчанию 300)
     def __init__(self, in_channels=3, R=4, T=300):
         super(SRRN, self).__init__()
         self.in_channels = in_channels
         self.R = R
         self.T = T
 
+        # объявляем подсеть фильтрации сигнала
         self.refinement_modules = nn.ModuleList()
         for i in range(4):
             module = nn.Sequential(
@@ -19,6 +21,7 @@ class SRRN(nn.Module):
                 nn.BatchNorm2d(in_channels),
                 nn.ReLU()
             )
+            # только 3 первых блока содержат AvgPool
             if i < 3:
                 module.add_module("pooling", nn.AvgPool2d(kernel_size=(1, 2)))
             module.add_module("tmsc", tmsc_module.TMSCModule(in_channels))
@@ -26,6 +29,7 @@ class SRRN(nn.Module):
             if i < 3:
                 T = T // 2
 
+        # объявляем подсеть восстановления сигнала
         self.reconstruction_modules = nn.ModuleList()
         for _ in range(3):
             module = nn.Sequential(
@@ -61,8 +65,6 @@ class SRRN(nn.Module):
             combined = reconstruction_output
 
         out = self.final_conv(combined)
-        print(f"out before final_conv {out.shape}")
         out = self.global_pool(out).squeeze(2)
-        print(f"out before return {out.shape}")
         
         return out.squeeze(1)
