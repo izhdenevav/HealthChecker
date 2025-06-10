@@ -60,7 +60,7 @@ def combined_loss(pred, target):
 #         for hr_min, hr_max in hr_ranges:
 #             indices = []
 #             for i in range(len(dataset)):
-#                 hr_values = dataset[i]['hr_values'].numpy()  # Среднее HR для видео
+#                 hr_values = dataset[i]['hr_values'].numpy()
 #                 mean_hr = np.mean(hr_values)
 #                 if hr_min <= mean_hr < hr_max:
 #                     indices.append(i)
@@ -90,7 +90,6 @@ logging.basicConfig(
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}\n")
 
     data_dir = 'D:/Studying/Fourth/UBFC-rPPG' 
     T = 512
@@ -98,41 +97,21 @@ def main():
     num_epochs = 50 
     number_of_stripes = 4
 
-    print(f"Start to upload dataset from {data_dir}\n")
     train_dataset = UBFCrPPGDataset(data_dir, split='train', fps=30, max_frames=T)
     test_dataset = UBFCrPPGDataset(data_dir, split='test', fps=30, max_frames=T)
-    print("Datasets ready!")
 
-    # # Oversampling для балансировки по HR
-    # hr_ranges = [(40, 60), (60, 80), (80, 100), (100, 120)]  # Пример диапазонов HR
-    # print("Start to make a sampler...")
+    # # oversampling для балансировки по HR
+    # # пример диапазонов HR
+    # hr_ranges = [(40, 60), (60, 80), (80, 100), (100, 120)]  
     # train_sampler = OversamplingSampler(train_dataset, hr_ranges)
-    # print("Sampler ready!")
 
-    print("Start to make a dataloaders...")
-
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        # sampler=train_sampler,
-        num_workers=4,
-        shuffle=False
-    )
-
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=4
-    )
-
-    print("Dataloaders ready!")
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=4, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
     model = SRRN(in_channels=3, R=4, T=T).to(device)
     optimizer = Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
     criterion = combined_loss
-    # criterion = nn.L1Loss()
 
     best_val_loss = float('inf')
     for epoch in range(num_epochs):
@@ -158,7 +137,6 @@ def main():
             
             multi_band_signals = torch.from_numpy(np.stack(multi_band_signals)).float().to(device)  # [B, C=3, K=4, T=1387]
             multi_band_signals = (multi_band_signals - multi_band_signals.mean(dim=-1, keepdim=True)) / (multi_band_signals.std(dim=-1, keepdim=True) + 1e-8)
-            # print(multi_band_signals.shape)
 
             optimizer.zero_grad()
             pred = model(multi_band_signals)  # [B, T=1387]

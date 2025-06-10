@@ -51,7 +51,6 @@ class UBFCrPPGDataset(Dataset):
         
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = cap.get(cv2.CAP_PROP_FPS)
-        # print(f"Видео {video_path}: {total_frames} кадров, FPS: {fps}, Длительность: {total_frames/fps:.3f} сек")
         
         frames = []
         frame_count = 0
@@ -90,7 +89,6 @@ class UBFCrPPGDataset(Dataset):
         gt_path = self.gt_paths[idx]
         with open(gt_path, 'r') as f:
             data = [float(x) for x in f.read().split()]
-            # print(f"Длина ground truth: {len(data)}")
 
         before_T = len(data) // 3
         ppg_signal = data[:before_T]
