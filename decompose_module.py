@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.fft import dct, idct
 
+# нам нужно разделить нашу карту на частотные полосы для дальнейшей фильтрации в модели
 def DCTiDCT(spatial_temporal_map, number_of_stripes=4, fps=30, freq_bands=None):
     regions = ['between_eyebrows_landmarks', 'nose_landmarks', 'left_cheek_landmarks', 'right_cheek_landmarks']
     channels = ['y', 'u', 'v']
@@ -14,7 +15,8 @@ def DCTiDCT(spatial_temporal_map, number_of_stripes=4, fps=30, freq_bands=None):
     K = number_of_stripes
     
     if freq_bands is None:
-        freq_bands = np.linspace(0.7, 2.5, number_of_stripes + 1)  # Частоты от 0.7 до 2.5 Гц
+        # частоты от 0.7 до 2.5 Гц
+        freq_bands = np.linspace(0.7, 2.5, number_of_stripes + 1)  
         freq_bands = [(freq_bands[i], freq_bands[i+1]) for i in range(len(freq_bands)-1)]
     
     freq_resolution = fps / T
@@ -49,5 +51,7 @@ def DCTiDCT(spatial_temporal_map, number_of_stripes=4, fps=30, freq_bands=None):
                 multi_band_signals[b, c_idx, k, :] = combined_signal
     
     if B == 1:
-        return multi_band_signals[0]  # [C, K, T]
-    return multi_band_signals  # [B, C, K, T]
+        # [C, K, T]
+        return multi_band_signals[0]
+    # [B, C, K, T]
+    return multi_band_signals
