@@ -205,6 +205,7 @@ def measurements(request):
         global_processor.measurements_buffer.clear()
 
     if request.method == 'POST':
+        # Ввод измерений пользователем
         time_str = request.POST.get('time')
         pulse = request.POST.get('hr')
         breathing = request.POST.get('br')
@@ -215,6 +216,7 @@ def measurements(request):
             created_at = timezone.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
             created_at = timezone.make_aware(created_at, timezone.get_current_timezone())
 
+            #Запись в бд
             Measurement.objects.create(
                 user=request.user,
                 pulse=float(pulse),
@@ -225,6 +227,7 @@ def measurements(request):
 
         return redirect('measurements')
 
+    # Отображение всех измерений пользователя
     user_measurements = Measurement.objects.filter(user=request.user).order_by('-created_at')
 
     return render(request, 'videodelivery/measurements.html', {
