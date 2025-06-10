@@ -2,6 +2,9 @@ import numpy as np
 
 import facepoints
 
+# ПРЕДОБРАБОТКА КАДРОВ
+
+# нужно выделить ключевые точки 4 зон лица - щек, межбровки и переносицы 
 def extract_face_regions(frame):
     regions = {}
 
@@ -14,6 +17,7 @@ def extract_face_regions(frame):
 
     return regions
 
+# вырезаем куски фотографий по точкам и находим среднее значение пикселей для каждой зоны
 def get_facial_regions_means(frame, regions):
     if not regions:
         return None
@@ -38,7 +42,7 @@ def get_facial_regions_means(frame, regions):
 
     return means
 
-# перевод в другое цветовое пространство
+# переводим в другое цветовое пространство (YUV) с помощью приведенного в статье уравнения
 def rgb_to_yuv(means_rgb):
     means_yuv = {}
     for region, rgb in means_rgb.items():
@@ -50,6 +54,8 @@ def rgb_to_yuv(means_rgb):
 
     return means_yuv
 
+
+# собираем все вместе и получаем пространственно-временную карту (зоны-номер кадра)
 def apply_color_space_conversion(frame):
     if frame is None or frame.size == 0:
         print("Ошибка: Пустой или некорректный кадр")
@@ -72,6 +78,7 @@ def apply_color_space_conversion(frame):
     
     return facial_means_yuv
 
+# нормализуем получившуюся пространственно-временную карту по времени
 def apply_time_domain_normalization(spatial_temporal_map):
     regions = spatial_temporal_map[0].keys()
     C, R, T = 3, len(regions), len(spatial_temporal_map)
@@ -85,6 +92,7 @@ def apply_time_domain_normalization(spatial_temporal_map):
     
     return normalized
 
+# добавляем белый шум к карте
 def add_white_noise(normalized_spatial_temporal_map, noise_std=0.05):
     noise = np.random.normal(0, noise_std, normalized_spatial_temporal_map.shape)
     noisy_map = normalized_spatial_temporal_map + noise
