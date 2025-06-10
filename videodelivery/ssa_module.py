@@ -4,11 +4,13 @@ import torch.nn.functional as F
 from scipy.fft import dct, idct
 import numpy as np
 
+# в схеме к тензору, поделенному на m окон, а точнее к каждой его части применяется дискретное косинусное преобразование 
 def apply_dct(signal, axis=-1, norm='ortho'):
     signal_np = signal.cpu().detach().numpy()
     dct_result = dct(signal_np, axis=axis, norm=norm)
     return torch.tensor(dct_result, device=signal.device)
 
+# сам модуль самовнимания
 class SSAModule(nn.Module):
     # m - размерность после DCT
     def __init__(self, in_channels, m=64):
