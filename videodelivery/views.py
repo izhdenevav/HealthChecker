@@ -25,6 +25,7 @@ class FrameProcessor:
     def __init__(self):
         self.N = 15
         self.landmark_buffers = [deque(maxlen=self.N) for _ in range(6)]
+        # === Буферы для хранения последних значений углов(чтобы извлекать среднее) ===
         self.yaw_buffer = deque(maxlen=self.N)
         self.pitch_buffer = deque(maxlen=self.N)
         self.roll_buffer = deque(maxlen=self.N)
@@ -45,14 +46,15 @@ class FrameProcessor:
         self.br_value = 0.0
         self.cg_filtered = np.zeros(30000000, dtype=np.float32)
 
+        # === Параметры камеры ===
         self.model_points = np.array([
-            (0.0, 0.0, 0.0),  # Кончик носа
-            (0.0, -330.0, -65.0),  # Подбородок
-            (-225.0, 170.0, -135.0),
-            (225.0, 170.0, -135.0),
-            (-150.0, -150.0, -125.0),
-            (150.0, -150.0, -125.0)
-        ], dtype=np.float64)
+            (0.0, 0.0, 0.0),  # 1. Кончик носа
+            (0.0, -330.0, -65.0),  # 2. Подбородок
+            (-225.0, 170.0, -135.0),  # 3. Левый глаз (внешний угол)
+            (225.0, 170.0, -135.0),  # 4. Правый глаз (внешний угол)
+            (-150.0, -150.0, -125.0),  # 5. Левый угол рта
+            (150.0, -150.0, -125.0)  # 6. Правый угол рта
+        ], dtype=np.float64))
 
         focal_length = 1108.5
         center = (640, 360)
@@ -78,7 +80,7 @@ class FrameProcessor:
         image_points = np.array([
             np.mean(self.landmark_buffers[j], axis=0) for j in range(6)
         ], dtype=np.float64)
-
+        # === Решаем PnP ===
         try:
             success, rvec, _ = cv2.solvePnP(self.model_points, image_points, self.camera_matrix, None,
                                             flags=cv2.SOLVEPNP_SQPNP)
@@ -86,7 +88,7 @@ class FrameProcessor:
                 return "Ошибка PnP", self.bpm, self.br_value
         except Exception:
             return "Ошибка solvePnP", self.bpm, self.br_value
-
+        # === Достаем углы поворота ===
         rmat, _ = cv2.Rodrigues(rvec)
         angles, *_ = cv2.RQDecomp3x3(rmat)
         yaw, pitch, roll = angles[1], angles[0], angles[2]
