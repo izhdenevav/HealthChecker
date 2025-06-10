@@ -1,18 +1,8 @@
 import numpy as np
 from scipy.fft import dct, idct
 
+# передаем пространственно-временную карту, количество частотных полос (по умолчанию 4), возвращаем пространственно-временную карту, разбитую на частотные полосы
 def DCTiDCT(spatial_temporal_map, number_of_stripes=4, fps=30, freq_bands=None):
-    """
-    
-    Args:
-        spatial_temporal_map (dict or list of dict): Словарь или список словарей с YUV значениями для регионов.
-        number_of_stripes (int): Количество частотных полос (K).
-        fps (int): Частота кадров видео.
-        freq_bands (list of tuples, optional): Список кортежей (f_min, f_max) для частотных полос.
-    
-    Returns:
-        np.ndarray: Многочастотные сигналы размером [B, C=3, K, T] или [C=3, K, T].
-    """
     regions = ['between_eyebrows_landmarks', 'nose_landmarks', 'left_cheek_landmarks', 'right_cheek_landmarks']
     channels = ['y', 'u', 'v']
     
@@ -25,7 +15,8 @@ def DCTiDCT(spatial_temporal_map, number_of_stripes=4, fps=30, freq_bands=None):
     K = number_of_stripes
     
     if freq_bands is None:
-        freq_bands = np.linspace(0.7, 2.5, number_of_stripes + 1)  # Частоты от 0.7 до 2.5 Гц
+        # частоты от 0.7 до 2.5 Гц
+        freq_bands = np.linspace(0.7, 2.5, number_of_stripes + 1)  
         freq_bands = [(freq_bands[i], freq_bands[i+1]) for i in range(len(freq_bands)-1)]
     
     freq_resolution = fps / T
