@@ -4,10 +4,12 @@ import torch.nn.functional as F
 from scipy.fft import dct, idct
 import numpy as np
 
+# в блоке SSA к некоторым частям входного тензора применяется дискретное косинусное преобразование
 def apply_dct(signal, axis=-1, norm='ortho'):
     signal_np = signal.cpu().detach().numpy()
     dct_result = dct(signal_np, axis=axis, norm=norm)
     return torch.tensor(dct_result, device=signal.device)
+
 
 class SSAModule(nn.Module):
     # m - размерность после DCT

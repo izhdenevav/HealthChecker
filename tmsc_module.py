@@ -8,21 +8,25 @@ class TMSCModule(nn.Module):
         reduced_channels = max(1, in_channels // 4)
         out_channels = max(1, in_channels // 3)
 
-
+        # свертка 1х1 для уменьшения количества каналов
         self.conv1x1_in = nn.Conv2d(in_channels, reduced_channels, kernel_size=1)
 
+        # 3 параллельных свертки разной длины для выявления разного рода признаков
         self.conv3x1 = nn.Conv2d(reduced_channels, out_channels, kernel_size=(3, 1), padding=(1, 0))
         self.conv5x1 = nn.Conv2d(reduced_channels, out_channels, kernel_size=(5, 1), padding=(2, 0))
         self.conv7x1 = nn.Conv2d(reduced_channels, out_channels, kernel_size=(7, 1), padding=(3, 0))
 
+        # возвращаем количество каналов в исходное
         self.conv1x1_out = nn.Conv2d(out_channels * 3, in_channels, kernel_size=1)
 
     def forward(self, x):
-        # [batch_size, in_channels, R, T]
+        # [B, in_channels, R, T]
         x = self.conv1x1_in(x)
         x1 = self.conv3x1(x)
         x2 = self.conv5x1(x)
         x3 = self.conv7x1(x)
+        # так устроен TMSC модуль: после первой свертки 1х1 данные расходятся по трем сверткам с разным размером ядра, а потом конкатенируются
         x = torch.cat([x1, x2, x3], dim=1)
+        # и отправляются в свертку 1x1
         x = self.conv1x1_out(x)
         return x
