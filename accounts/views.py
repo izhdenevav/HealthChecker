@@ -8,6 +8,7 @@ from .models import HealthMeasurement
 from datetime import datetime
 
 
+# Регистрация нового пользователя
 def register_view(request):
     if request.method == 'POST':
         form = EmailUserCreationForm(request.POST)
@@ -22,6 +23,7 @@ def register_view(request):
     return render(request, 'registration/register.html', {'form': form})
 
 
+# Авторизация пользователя
 def login_view(request):
     if request.method == 'POST':
         form = EmailAuthForm(request, data=request.POST)
@@ -56,11 +58,13 @@ def login_view(request):
     })
 
 
+# Выход из аккаунта
 def logout_view(request):
     logout(request)
     return redirect('index')
 
 
+# Просмотр списка измерений (только для авторизованных)
 @login_required
 def measurements_view(request):
     measurements = HealthMeasurement.objects.filter(user=request.user).order_by('-date')
